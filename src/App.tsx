@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { LoginScreen } from './app/components/LoginScreen';
 import { AdminView } from './app/components/AdminView';
+import { NursingView } from './app/components/NursingView';
 import { ProtectedRoute } from './app/components/ProtectedRoute';
 import { getUserRole, type UserRole } from './lib/auth';
 
@@ -20,7 +21,7 @@ function AppRoutes() {
   return <Routes>
     <Route path="/login" element={<LoginScreen onLogin={(role) => navigate(defaultRouteByRole[role], { replace: true })} />} />
     <Route path="/agenda" element={<ProtectedRoute allowedRoles={['admin']}><AdminView /></ProtectedRoute>} />
-    <Route path="/triaje" element={<ProtectedRoute allowedRoles={['enfermeria', 'medico']}><PendingView title="Carga rápida de triaje" /></ProtectedRoute>} />
+    <Route path="/triaje" element={<ProtectedRoute allowedRoles={['enfermeria', 'medico']}><NursingView /></ProtectedRoute>} />
     <Route path="/hcd/:pacienteId" element={<ProtectedRoute allowedRoles={['medico']}><PendingView title="Historia clínica digital" /></ProtectedRoute>} />
     <Route path="/" element={<RoleHomeRedirect />} />
     <Route path="*" element={<RoleHomeRedirect />} />
