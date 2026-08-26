@@ -1,51 +1,31 @@
-import { useState } from 'react';
-import { RegistroConsulta } from './RegistroConsulta';
-import { CurvasDesarrollo } from './CurvasDesarrollo';
-import { CargarMedicion } from './CargarMedicion';
+import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { LoginScreen } from './app/components/LoginScreen';
+import { ProtectedRoute } from './app/components/ProtectedRoute';
+import { getUserRole, type UserRole } from './lib/auth';
 
-type Vista = 'registro' | 'medicion' | 'grafico';
+const defaultRouteByRole: Record<UserRole, string> = { admin: '/agenda', enfermeria: '/triaje', medico: '/triaje' };
 
-function App() {
-  const [vistaActual, setVistaActual] = useState<Vista>('registro');
-
-  return (
-    <div className="min-h-screen bg-sky-50 font-sans text-slate-800">
-      <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-sky-100 p-6 flex justify-between items-center z-10">
-        <div>
-          <h1 className="text-2xl font-black text-blue-900 tracking-tight">
-            SIGP<span className="text-blue-500">.Med</span>
-          </h1>
-        </div>
-
-        <div className="bg-sky-100 p-1 rounded-full flex gap-1">
-          <button
-            onClick={() => setVistaActual('registro')}
-            className={`px-6 py-2 rounded-full font-bold transition-all ${vistaActual === 'registro' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-700 hover:bg-sky-200'}`}
-          >
-            Consulta
-          </button>
-          <button
-            onClick={() => setVistaActual('medicion')}
-            className={`px-6 py-2 rounded-full font-bold transition-all ${vistaActual === 'medicion' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-700 hover:bg-sky-200'}`}
-          >
-            Mediciones
-          </button>
-          <button
-            onClick={() => setVistaActual('grafico')}
-            className={`px-6 py-2 rounded-full font-bold transition-all ${vistaActual === 'grafico' ? 'bg-blue-600 text-white shadow-lg' : 'text-blue-700 hover:bg-sky-200'}`}
-          >
-            Evolución
-          </button>
-        </div>
-      </header>
-
-      <main className="p-8 max-w-5xl mx-auto">
-        {vistaActual === 'registro'  && <RegistroConsulta />}
-        {vistaActual === 'medicion'  && <CargarMedicion />}
-        {vistaActual === 'grafico'   && <CurvasDesarrollo />}
-      </main>
-    </div>
-  );
+function PendingView({ title }: { title: string }) {
+  return <main className="grid min-h-screen place-items-center bg-slate-100 p-6 text-slate-800"><section className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm"><p className="text-sm font-semibold uppercase tracking-wider text-blue-700">SIGP</p><h1 className="mt-2 text-2xl font-bold">{title}</h1><p className="mt-3 text-slate-600">Esta vista se incorporará en la próxima etapa de implementación.</p></section></main>;
 }
 
-export default App;
+function RoleHomeRedirect() {
+  const role = getUserRole();
+  return <Navigate replace to={role ? defaultRouteByRole[role] : '/login'} />;
+}
+
+function AppRoutes() {
+  const navigate = useNavigate();
+  return <Routes>
+    <Route path="/login" element={<LoginScreen onLogin={(role) => navigate(defaultRouteByRole[role], { replace: true })} />} />
+    <Route path="/agenda" element={<ProtectedRoute allowedRoles={['admin']}><PendingView title="Agenda de turnos" /></ProtectedRoute>} />
+    <Route path="/triaje" element={<ProtectedRoute allowedRoles={['enfermeria', 'medico']}><PendingView title="Carga rápida de triaje" /></ProtectedRoute>} />
+    <Route path="/hcd/:pacienteId" element={<ProtectedRoute allowedRoles={['medico']}><PendingView title="Historia clínica digital" /></ProtectedRoute>} />
+    <Route path="/" element={<RoleHomeRedirect />} />
+    <Route path="*" element={<RoleHomeRedirect />} />
+  </Routes>;
+}
+
+export default function App() {
+  return <HashRouter><AppRoutes /></HashRouter>;
+}
