@@ -1,0 +1,300 @@
+{
+  "meta": {
+    "schemaVersion": "1.0.0",
+    "generatedAt": "2026-08-29T20:00:00-03:00",
+    "databaseDialect": "PostgreSQL 15",
+    "project": "Sistema Integral de Gestión Pediátrica (SIGP)",
+    "locale": "es-AR",
+    "timeZone": "America/Argentina/Buenos_Aires",
+    "publicProjection": true,
+    "notice": "Datos completamente ficticios. Los hashes de contraseña y secretos de integración se omiten porque este archivo se publica en el frontend."
+  },
+  "security": {
+    "permissions": [
+      { "id": "21000000-0000-4000-8000-000000000001", "code": "usuarios.gestionar", "description": "Crear, modificar y deshabilitar usuarios" },
+      { "id": "21000000-0000-4000-8000-000000000002", "code": "hcd.leer", "description": "Consultar historias clínicas autorizadas" },
+      { "id": "21000000-0000-4000-8000-000000000003", "code": "hcd.escribir", "description": "Registrar información clínica" },
+      { "id": "21000000-0000-4000-8000-000000000004", "code": "hcd.firmar", "description": "Firmar registros de consulta" },
+      { "id": "21000000-0000-4000-8000-000000000005", "code": "signos.registrar", "description": "Registrar signos vitales" },
+      { "id": "21000000-0000-4000-8000-000000000006", "code": "turnos.gestionar", "description": "Administrar la agenda clínica" },
+      { "id": "21000000-0000-4000-8000-000000000007", "code": "turnos.solicitar", "description": "Solicitar o cancelar turnos propios" },
+      { "id": "21000000-0000-4000-8000-000000000008", "code": "sintomas.registrar", "description": "Registrar síntomas posconsulta" },
+      { "id": "21000000-0000-4000-8000-000000000009", "code": "alertas.confirmar", "description": "Confirmar y resolver alertas médicas" },
+      { "id": "21000000-0000-4000-8000-000000000010", "code": "estudios.cargar", "description": "Cargar o importar estudios externos" },
+      { "id": "21000000-0000-4000-8000-000000000011", "code": "recetas.emitir", "description": "Emitir recetas digitales" },
+      { "id": "21000000-0000-4000-8000-000000000012", "code": "auditoria.leer", "description": "Consultar el log de auditoría" }
+    ],
+    "roles": [
+      { "id": "20000000-0000-4000-8000-000000000001", "code": "administrador_sistema", "name": "Administrador del sistema" },
+      { "id": "20000000-0000-4000-8000-000000000002", "code": "medico", "name": "Médico pediatra" },
+      { "id": "20000000-0000-4000-8000-000000000003", "code": "enfermeria", "name": "Personal de enfermería" },
+      { "id": "20000000-0000-4000-8000-000000000004", "code": "administrativo", "name": "Personal administrativo" },
+      { "id": "20000000-0000-4000-8000-000000000005", "code": "tutor", "name": "Tutor o padre" }
+    ],
+    "rolePermissions": [
+      { "roleId": "20000000-0000-4000-8000-000000000001", "permissionId": "21000000-0000-4000-8000-000000000001" },
+      { "roleId": "20000000-0000-4000-8000-000000000001", "permissionId": "21000000-0000-4000-8000-000000000012" },
+      { "roleId": "20000000-0000-4000-8000-000000000002", "permissionId": "21000000-0000-4000-8000-000000000002" },
+      { "roleId": "20000000-0000-4000-8000-000000000002", "permissionId": "21000000-0000-4000-8000-000000000003" },
+      { "roleId": "20000000-0000-4000-8000-000000000002", "permissionId": "21000000-0000-4000-8000-000000000004" },
+      { "roleId": "20000000-0000-4000-8000-000000000002", "permissionId": "21000000-0000-4000-8000-000000000009" },
+      { "roleId": "20000000-0000-4000-8000-000000000002", "permissionId": "21000000-0000-4000-8000-000000000010" },
+      { "roleId": "20000000-0000-4000-8000-000000000002", "permissionId": "21000000-0000-4000-8000-000000000011" },
+      { "roleId": "20000000-0000-4000-8000-000000000003", "permissionId": "21000000-0000-4000-8000-000000000002" },
+      { "roleId": "20000000-0000-4000-8000-000000000003", "permissionId": "21000000-0000-4000-8000-000000000005" },
+      { "roleId": "20000000-0000-4000-8000-000000000003", "permissionId": "21000000-0000-4000-8000-000000000009" },
+      { "roleId": "20000000-0000-4000-8000-000000000004", "permissionId": "21000000-0000-4000-8000-000000000006" },
+      { "roleId": "20000000-0000-4000-8000-000000000004", "permissionId": "21000000-0000-4000-8000-000000000010" },
+      { "roleId": "20000000-0000-4000-8000-000000000005", "permissionId": "21000000-0000-4000-8000-000000000007" },
+      { "roleId": "20000000-0000-4000-8000-000000000005", "permissionId": "21000000-0000-4000-8000-000000000008" }
+    ],
+    "users": [
+      { "id": "10000000-0000-4000-8000-000000000001", "email": "admin@sigp.demo", "firstName": "Lucía", "lastName": "Benítez", "phone": "+543755555001", "status": "activo", "passwordConfigured": true },
+      { "id": "10000000-0000-4000-8000-000000000002", "email": "gustavo.cecheto@sigp.demo", "firstName": "Gustavo", "lastName": "Cecheto", "phone": "+543755555002", "status": "activo", "passwordConfigured": true },
+      { "id": "10000000-0000-4000-8000-000000000003", "email": "sofia.enfermeria@sigp.demo", "firstName": "Sofía", "lastName": "Ríos", "phone": "+543755555003", "status": "activo", "passwordConfigured": true },
+      { "id": "10000000-0000-4000-8000-000000000004", "email": "carla.recepcion@sigp.demo", "firstName": "Carla", "lastName": "Méndez", "phone": "+543755555004", "status": "activo", "passwordConfigured": true },
+      { "id": "10000000-0000-4000-8000-000000000005", "email": "ana.tutora@example.test", "firstName": "Ana", "lastName": "Gómez", "phone": "+543755555005", "status": "activo", "passwordConfigured": true },
+      { "id": "10000000-0000-4000-8000-000000000006", "email": "marcos.tutor@example.test", "firstName": "Marcos", "lastName": "Silva", "phone": "+543755555006", "status": "activo", "passwordConfigured": true }
+    ],
+    "userRoles": [
+      { "userId": "10000000-0000-4000-8000-000000000001", "roleId": "20000000-0000-4000-8000-000000000001", "clinicSiteId": "30000000-0000-4000-8000-000000000001" },
+      { "userId": "10000000-0000-4000-8000-000000000002", "roleId": "20000000-0000-4000-8000-000000000002", "clinicSiteId": "30000000-0000-4000-8000-000000000001" },
+      { "userId": "10000000-0000-4000-8000-000000000003", "roleId": "20000000-0000-4000-8000-000000000003", "clinicSiteId": "30000000-0000-4000-8000-000000000001" },
+      { "userId": "10000000-0000-4000-8000-000000000004", "roleId": "20000000-0000-4000-8000-000000000004", "clinicSiteId": "30000000-0000-4000-8000-000000000001" },
+      { "userId": "10000000-0000-4000-8000-000000000005", "roleId": "20000000-0000-4000-8000-000000000005", "clinicSiteId": "30000000-0000-4000-8000-000000000001" },
+      { "userId": "10000000-0000-4000-8000-000000000006", "roleId": "20000000-0000-4000-8000-000000000005", "clinicSiteId": "30000000-0000-4000-8000-000000000001" }
+    ]
+  },
+  "organization": {
+    "clinicSites": [
+      {
+        "id": "30000000-0000-4000-8000-000000000001",
+        "code": "OBERA-CENTRO",
+        "name": "Clínica Pediátrica Oberá Centro",
+        "address": "Av. de las Américas 1250",
+        "city": "Oberá",
+        "province": "Misiones",
+        "timeZone": "America/Argentina/Buenos_Aires",
+        "active": true
+      }
+    ],
+    "memberships": [
+      { "id": "31000000-0000-4000-8000-000000000001", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000001", "employeeNumber": "ADM-001", "position": "Administradora del sistema", "status": "activa", "startDate": "2026-01-05" },
+      { "id": "31000000-0000-4000-8000-000000000002", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000002", "employeeNumber": "MED-014", "position": "Médico pediatra", "status": "activa", "startDate": "2021-03-01" },
+      { "id": "31000000-0000-4000-8000-000000000003", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000003", "employeeNumber": "ENF-008", "position": "Enfermera", "status": "activa", "startDate": "2023-02-15" },
+      { "id": "31000000-0000-4000-8000-000000000004", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000004", "employeeNumber": "REC-003", "position": "Recepcionista", "status": "activa", "startDate": "2024-05-06" }
+    ],
+    "professionalProfiles": [
+      { "userId": "10000000-0000-4000-8000-000000000002", "licenseNumber": "MP-MIS-18452", "specialty": "Pediatría", "digitalCertificateId": "CERT-DEMO-MP-18452", "certificateValidUntil": "2027-12-31T23:59:59-03:00" }
+    ],
+    "healthInsurers": [
+      { "id": "41000000-0000-4000-8000-000000000001", "code": "OSDEMO", "name": "Obra Social Demo Misiones", "active": true }
+    ],
+    "laboratories": [
+      { "id": "90000000-0000-4000-8000-000000000001", "code": "LAB-OBERA-01", "name": "Laboratorio Regional Oberá Demo", "hl7Oid": "2.16.840.1.113883.3.9999.1", "active": true }
+    ]
+  },
+  "patients": {
+    "people": [
+      { "id": "40000000-0000-4000-8000-000000000001", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "documentType": "DNI", "documentNumber": "55900101", "firstName": "Martina", "lastName": "Gómez", "birthDate": "2022-08-19", "biologicalSex": "femenino", "bloodType": "O+", "city": "Oberá", "active": true },
+      { "id": "40000000-0000-4000-8000-000000000002", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "documentType": "DNI", "documentNumber": "56900102", "firstName": "Benjamín", "lastName": "Silva", "birthDate": "2024-01-10", "biologicalSex": "masculino", "bloodType": "A+", "city": "Oberá", "active": true }
+    ],
+    "guardians": [
+      { "patientId": "40000000-0000-4000-8000-000000000001", "guardianUserId": "10000000-0000-4000-8000-000000000005", "relationship": "madre", "legalGuardian": true, "primaryContact": true, "canViewClinicalRecord": true, "canManageAppointments": true },
+      { "patientId": "40000000-0000-4000-8000-000000000002", "guardianUserId": "10000000-0000-4000-8000-000000000006", "relationship": "padre", "legalGuardian": true, "primaryContact": true, "canViewClinicalRecord": true, "canManageAppointments": true }
+    ],
+    "privacyConsents": [
+      { "id": "40100000-0000-4000-8000-000000000001", "patientId": "40000000-0000-4000-8000-000000000001", "guardianUserId": "10000000-0000-4000-8000-000000000005", "type": "tratamiento_datos_salud", "documentVersion": "1.0", "status": "otorgado", "grantedAt": "2026-06-28T09:03:00-03:00" },
+      { "id": "40100000-0000-4000-8000-000000000002", "patientId": "40000000-0000-4000-8000-000000000002", "guardianUserId": "10000000-0000-4000-8000-000000000006", "type": "tratamiento_datos_salud", "documentVersion": "1.0", "status": "otorgado", "grantedAt": "2026-08-28T18:41:00-03:00" }
+    ],
+    "coverages": [
+      { "id": "42000000-0000-4000-8000-000000000001", "patientId": "40000000-0000-4000-8000-000000000001", "healthInsurerId": "41000000-0000-4000-8000-000000000001", "memberNumber": "OSD-1000101", "plan": "Pediátrico Integral", "status": "vigente", "validFrom": "2026-01-01", "validUntil": "2026-12-31", "primary": true },
+      { "id": "42000000-0000-4000-8000-000000000002", "patientId": "40000000-0000-4000-8000-000000000002", "healthInsurerId": "41000000-0000-4000-8000-000000000001", "memberNumber": "OSD-1000102", "plan": "Pediátrico Integral", "status": "vigente", "validFrom": "2026-01-01", "validUntil": "2026-12-31", "primary": true }
+    ],
+    "coverageValidations": [
+      { "id": "42100000-0000-4000-8000-000000000001", "coverageId": "42000000-0000-4000-8000-000000000002", "appointmentId": "51000000-0000-4000-8000-000000000002", "requestedByUserId": "10000000-0000-4000-8000-000000000004", "requestedAt": "2026-08-29T10:05:00-03:00", "answeredAt": "2026-08-29T10:05:02-03:00", "status": "vigente", "authorizationCode": "AUT-DEMO-88421", "restrictions": null, "request": { "memberNumber": "OSD-1000102", "service": "consulta_pediatrica" }, "response": { "eligible": true, "copay": 0 } }
+    ]
+  },
+  "care": {
+    "clinicalRecords": [
+      { "id": "50000000-0000-4000-8000-000000000001", "patientId": "40000000-0000-4000-8000-000000000001", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "recordNumber": "HCD-2026-0001", "status": "activa", "createdByUserId": "10000000-0000-4000-8000-000000000004", "createdAt": "2026-06-28T09:05:00-03:00" },
+      { "id": "50000000-0000-4000-8000-000000000002", "patientId": "40000000-0000-4000-8000-000000000002", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "recordNumber": "HCD-2026-0002", "status": "activa", "createdByUserId": "10000000-0000-4000-8000-000000000004", "createdAt": "2026-08-28T18:43:00-03:00" }
+    ],
+    "appointments": [
+      { "id": "51000000-0000-4000-8000-000000000001", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "patientId": "40000000-0000-4000-8000-000000000001", "doctorUserId": "10000000-0000-4000-8000-000000000002", "requestedByUserId": "10000000-0000-4000-8000-000000000005", "type": "consulta", "reason": "Fiebre y tos de 48 horas", "startsAt": "2026-06-28T09:30:00-03:00", "endsAt": "2026-06-28T10:00:00-03:00", "status": "completado", "requestChannel": "app_tutor" },
+      { "id": "51000000-0000-4000-8000-000000000002", "clinicSiteId": "30000000-0000-4000-8000-000000000001", "patientId": "40000000-0000-4000-8000-000000000002", "doctorUserId": "10000000-0000-4000-8000-000000000002", "requestedByUserId": "10000000-0000-4000-8000-000000000006", "type": "control", "reason": "Control posterior a guardia", "startsAt": "2026-09-02T11:00:00-03:00", "endsAt": "2026-09-02T11:30:00-03:00", "status": "confirmado", "requestChannel": "app_tutor" }
+    ],
+    "encounters": [
+      { "id": "52000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "appointmentId": "51000000-0000-4000-8000-000000000001", "type": "consulta", "status": "finalizada", "doctorUserId": "10000000-0000-4000-8000-000000000002", "admittedByUserId": "10000000-0000-4000-8000-000000000004", "admittedAt": "2026-06-28T09:28:00-03:00", "finishedAt": "2026-06-28T09:57:00-03:00" },
+      { "id": "52000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "appointmentId": null, "type": "guardia", "status": "finalizada", "doctorUserId": "10000000-0000-4000-8000-000000000002", "admittedByUserId": "10000000-0000-4000-8000-000000000004", "admittedAt": "2026-08-28T18:40:00-03:00", "finishedAt": "2026-08-28T19:25:00-03:00" }
+    ],
+    "consultationEntries": [
+      { "id": "53000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "encounterId": "52000000-0000-4000-8000-000000000001", "doctorUserId": "10000000-0000-4000-8000-000000000002", "chiefComplaint": "Fiebre y tos de 48 horas", "diagnosisSummary": "Otitis media aguda derecha", "prescriptionSummary": "Amoxicilina 250 mg/5 ml: 7 ml cada 8 horas durante 10 días", "followUpPlan": "Control en 72 horas o antes ante dificultad respiratoria, somnolencia o mala tolerancia oral", "status": "firmado", "version": 1, "contentHash": "1111111111111111111111111111111111111111111111111111111111111111", "digitalSignature": "MOCK-SIGNATURE-MP-MIS-18452-0001", "signedAt": "2026-06-28T09:56:30-03:00" },
+      { "id": "53000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "encounterId": "52000000-0000-4000-8000-000000000002", "doctorUserId": "10000000-0000-4000-8000-000000000002", "chiefComplaint": "Fiebre alta y respiración rápida", "diagnosisSummary": "Infección respiratoria aguda de probable etiología viral", "prescriptionSummary": "Ibuprofeno suspensión: 5 ml cada 8 horas si presenta fiebre", "followUpPlan": "Control el 02/09; regresar a guardia si la saturación es menor a 94% o aumenta el esfuerzo respiratorio", "status": "firmado", "version": 1, "contentHash": "2222222222222222222222222222222222222222222222222222222222222222", "digitalSignature": "MOCK-SIGNATURE-MP-MIS-18452-0002", "signedAt": "2026-08-28T19:24:00-03:00" }
+    ],
+    "diagnoses": [
+      { "id": "54000000-0000-4000-8000-000000000001", "consultationEntryId": "53000000-0000-4000-8000-000000000001", "icd10Code": "H66.9", "description": "Otitis media, no especificada", "primary": true, "confirmed": true },
+      { "id": "54000000-0000-4000-8000-000000000002", "consultationEntryId": "53000000-0000-4000-8000-000000000002", "icd10Code": "J06.9", "description": "Infección aguda de las vías respiratorias superiores", "primary": true, "confirmed": true }
+    ]
+  },
+  "medication": {
+    "catalog": [
+      { "id": "60000000-0000-4000-8000-000000000001", "atcCode": "J01CA04", "activeIngredient": "Amoxicilina", "brandName": "Amoxicilina Demo", "pharmaceuticalForm": "suspensión oral", "concentration": "250 mg/5 ml", "active": true, "catalogVersion": "2026.08" },
+      { "id": "60000000-0000-4000-8000-000000000002", "atcCode": "M01AE01", "activeIngredient": "Ibuprofeno", "brandName": "Ibuprofeno Demo", "pharmaceuticalForm": "suspensión oral", "concentration": "100 mg/5 ml", "active": true, "catalogVersion": "2026.08" },
+      { "id": "60000000-0000-4000-8000-000000000003", "atcCode": "B01AA03", "activeIngredient": "Warfarina", "brandName": "Warfarina Demo", "pharmaceuticalForm": "comprimido", "concentration": "5 mg", "active": true, "catalogVersion": "2026.08" }
+    ],
+    "interactions": [
+      { "medicationAId": "60000000-0000-4000-8000-000000000002", "medicationBId": "60000000-0000-4000-8000-000000000003", "severity": "critica", "description": "La combinación puede incrementar el riesgo de sangrado", "recommendation": "Evitar la combinación o indicar control médico estricto" }
+    ],
+    "allergies": [
+      { "id": "60100000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "substance": "Penicilina", "reaction": "Exantema generalizado", "severity": "moderada", "recordedByUserId": "10000000-0000-4000-8000-000000000002", "recordedAt": "2026-08-28T19:02:00-03:00" }
+    ],
+    "prescriptions": [
+      { "id": "61000000-0000-4000-8000-000000000001", "consultationEntryId": "53000000-0000-4000-8000-000000000001", "doctorUserId": "10000000-0000-4000-8000-000000000002", "status": "completada", "digitalSignature": "MOCK-RX-SIGNATURE-0001", "contentHash": "3333333333333333333333333333333333333333333333333333333333333333", "issuedAt": "2026-06-28T09:55:00-03:00", "validUntil": "2026-07-08" },
+      { "id": "61000000-0000-4000-8000-000000000002", "consultationEntryId": "53000000-0000-4000-8000-000000000002", "doctorUserId": "10000000-0000-4000-8000-000000000002", "status": "activa", "digitalSignature": "MOCK-RX-SIGNATURE-0002", "contentHash": "4444444444444444444444444444444444444444444444444444444444444444", "issuedAt": "2026-08-28T19:20:00-03:00", "validUntil": "2026-09-04" }
+    ],
+    "prescriptionItems": [
+      { "id": "62000000-0000-4000-8000-000000000001", "prescriptionId": "61000000-0000-4000-8000-000000000001", "medicationId": "60000000-0000-4000-8000-000000000001", "dose": 7, "doseUnit": "ml", "route": "oral", "frequencyHours": 8, "durationDays": 10, "instructions": "Agitar antes de usar y administrar después de las comidas" },
+      { "id": "62000000-0000-4000-8000-000000000002", "prescriptionId": "61000000-0000-4000-8000-000000000002", "medicationId": "60000000-0000-4000-8000-000000000002", "dose": 5, "doseUnit": "ml", "route": "oral", "frequencyHours": 8, "durationDays": 3, "instructions": "Administrar únicamente si presenta fiebre" }
+    ]
+  },
+  "growthAndVaccination": {
+    "vitalSigns": [
+      { "id": "70000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "encounterId": null, "recordedByUserId": "10000000-0000-4000-8000-000000000003", "recordedAt": "2025-08-19T10:12:00-03:00", "ageDays": 1096, "weightKg": 12.6, "heightCm": 92.0, "headCircumferenceCm": 48.5, "temperatureC": 36.7, "heartRateBpm": 101, "oxygenSaturationPct": 99 },
+      { "id": "70000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "encounterId": "52000000-0000-4000-8000-000000000001", "recordedByUserId": "10000000-0000-4000-8000-000000000003", "recordedAt": "2026-08-18T09:33:00-03:00", "ageDays": 1460, "weightKg": 13.0, "heightCm": 99.8, "headCircumferenceCm": 49.1, "temperatureC": 38.4, "heartRateBpm": 118, "oxygenSaturationPct": 97 },
+      { "id": "70000000-0000-4000-8000-000000000003", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "encounterId": "52000000-0000-4000-8000-000000000002", "recordedByUserId": "10000000-0000-4000-8000-000000000003", "recordedAt": "2026-08-28T18:47:00-03:00", "ageDays": 961, "weightKg": 12.1, "heightCm": 88.2, "headCircumferenceCm": 48.0, "temperatureC": 39.2, "heartRateBpm": 148, "oxygenSaturationPct": 94, "respiratoryRateRpm": 42 }
+    ],
+    "referenceSources": [
+      { "id": "71000000-0000-4000-8000-000000000001", "code": "OMS", "name": "Estándares de crecimiento infantil OMS - dataset demostrativo", "version": "2026-demo", "active": true }
+    ],
+    "growthReferenceValues": [
+      { "id": "71100000-0000-4000-8001-000000000003", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 3, "value": 11.0 },
+      { "id": "71100000-0000-4000-8001-000000000010", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 10, "value": 11.8 },
+      { "id": "71100000-0000-4000-8001-000000000025", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 25, "value": 12.7 },
+      { "id": "71100000-0000-4000-8001-000000000050", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 50, "value": 13.9 },
+      { "id": "71100000-0000-4000-8001-000000000075", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 75, "value": 15.2 },
+      { "id": "71100000-0000-4000-8001-000000000090", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 90, "value": 16.6 },
+      { "id": "71100000-0000-4000-8001-000000000097", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1096, "percentile": 97, "value": 18.0 },
+      { "id": "71100000-0000-4000-8002-000000000003", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 3, "value": 12.3 },
+      { "id": "71100000-0000-4000-8002-000000000010", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 10, "value": 13.2 },
+      { "id": "71100000-0000-4000-8002-000000000025", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 25, "value": 14.2 },
+      { "id": "71100000-0000-4000-8002-000000000050", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 50, "value": 15.5 },
+      { "id": "71100000-0000-4000-8002-000000000075", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 75, "value": 17.0 },
+      { "id": "71100000-0000-4000-8002-000000000090", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 90, "value": 18.7 },
+      { "id": "71100000-0000-4000-8002-000000000097", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "peso_kg", "ageDays": 1460, "percentile": 97, "value": 20.5 },
+      { "id": "71100000-0000-4000-8003-000000000003", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 3, "value": 87.5 },
+      { "id": "71100000-0000-4000-8003-000000000010", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 10, "value": 89.5 },
+      { "id": "71100000-0000-4000-8003-000000000025", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 25, "value": 91.5 },
+      { "id": "71100000-0000-4000-8003-000000000050", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 50, "value": 94.1 },
+      { "id": "71100000-0000-4000-8003-000000000075", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 75, "value": 96.7 },
+      { "id": "71100000-0000-4000-8003-000000000090", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 90, "value": 99.0 },
+      { "id": "71100000-0000-4000-8003-000000000097", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1096, "percentile": 97, "value": 101.0 },
+      { "id": "71100000-0000-4000-8004-000000000003", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 3, "value": 94.0 },
+      { "id": "71100000-0000-4000-8004-000000000010", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 10, "value": 96.0 },
+      { "id": "71100000-0000-4000-8004-000000000025", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 25, "value": 98.3 },
+      { "id": "71100000-0000-4000-8004-000000000050", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 50, "value": 101.0 },
+      { "id": "71100000-0000-4000-8004-000000000075", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 75, "value": 104.0 },
+      { "id": "71100000-0000-4000-8004-000000000090", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 90, "value": 106.5 },
+      { "id": "71100000-0000-4000-8004-000000000097", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "talla_cm", "ageDays": 1460, "percentile": 97, "value": 109.0 },
+      { "id": "71100000-0000-4000-8005-000000000003", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 3, "value": 46.7 },
+      { "id": "71100000-0000-4000-8005-000000000010", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 10, "value": 47.3 },
+      { "id": "71100000-0000-4000-8005-000000000025", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 25, "value": 48.0 },
+      { "id": "71100000-0000-4000-8005-000000000050", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 50, "value": 49.0 },
+      { "id": "71100000-0000-4000-8005-000000000075", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 75, "value": 50.0 },
+      { "id": "71100000-0000-4000-8005-000000000090", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 90, "value": 50.8 },
+      { "id": "71100000-0000-4000-8005-000000000097", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1096, "percentile": 97, "value": 51.5 },
+      { "id": "71100000-0000-4000-8006-000000000003", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 3, "value": 47.0 },
+      { "id": "71100000-0000-4000-8006-000000000010", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 10, "value": 47.6 },
+      { "id": "71100000-0000-4000-8006-000000000025", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 25, "value": 48.3 },
+      { "id": "71100000-0000-4000-8006-000000000050", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 50, "value": 49.3 },
+      { "id": "71100000-0000-4000-8006-000000000075", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 75, "value": 50.3 },
+      { "id": "71100000-0000-4000-8006-000000000090", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 90, "value": 51.1 },
+      { "id": "71100000-0000-4000-8006-000000000097", "sourceId": "71000000-0000-4000-8000-000000000001", "sex": "femenino", "metric": "perimetro_cefalico_cm", "ageDays": 1460, "percentile": 97, "value": 51.8 }
+    ],
+    "clinicalThresholds": [
+      { "id": "72000000-0000-4000-8000-000000000001", "sourceId": "71000000-0000-4000-8000-000000000001", "metricCode": "temperatura_c", "sex": null, "minAgeDays": 0, "maxAgeDays": 6574, "warningMax": 38.4, "criticalMax": 39.0, "unit": "°C", "active": true },
+      { "id": "72000000-0000-4000-8000-000000000002", "sourceId": "71000000-0000-4000-8000-000000000001", "metricCode": "saturacion_oxigeno_pct", "sex": null, "minAgeDays": 0, "maxAgeDays": 6574, "warningMin": 95, "criticalMin": 92, "unit": "%", "active": true }
+    ],
+    "vaccines": [
+      { "id": "73000000-0000-4000-8000-000000000001", "code": "TRIPLE_VIRAL", "name": "Triple viral", "active": true },
+      { "id": "73000000-0000-4000-8000-000000000002", "code": "ANTIGRIPAL", "name": "Antigripal", "active": true }
+    ],
+    "vaccinationScheduleRules": [
+      { "id": "73100000-0000-4000-8000-000000000001", "sourceId": "71000000-0000-4000-8000-000000000001", "vaccineId": "73000000-0000-4000-8000-000000000001", "doseNumber": 1, "targetAgeDays": 365, "toleranceDays": 30, "mandatory": true },
+      { "id": "73100000-0000-4000-8000-000000000002", "sourceId": "71000000-0000-4000-8000-000000000001", "vaccineId": "73000000-0000-4000-8000-000000000002", "doseNumber": 1, "targetAgeDays": 180, "toleranceDays": 60, "mandatory": false }
+    ],
+    "patientVaccinations": [
+      { "id": "73200000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "vaccineId": "73000000-0000-4000-8000-000000000001", "doseNumber": 1, "appliedOn": "2023-08-25", "batch": "TV-DEMO-8821", "institution": "Vacunatorio Oberá Demo", "recordedByUserId": "10000000-0000-4000-8000-000000000003" }
+    ]
+  },
+  "followUp": {
+    "symptomCatalog": [
+      { "id": "80000000-0000-4000-8000-000000000001", "code": "FIEBRE", "name": "Fiebre", "icon": "thermometer", "requiresDetail": false, "criticalByDefault": false, "active": true },
+      { "id": "80000000-0000-4000-8000-000000000002", "code": "VOMITOS", "name": "Vómitos", "icon": "nausea", "requiresDetail": false, "criticalByDefault": false, "active": true },
+      { "id": "80000000-0000-4000-8000-000000000003", "code": "DIFICULTAD_RESPIRATORIA", "name": "Dificultad respiratoria", "icon": "lungs", "requiresDetail": true, "criticalByDefault": true, "active": true }
+    ],
+    "symptomReports": [
+      { "id": "81000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "guardianUserId": "10000000-0000-4000-8000-000000000005", "periodFrom": "2026-06-26T18:00:00-03:00", "periodUntil": "2026-06-28T08:30:00-03:00", "notes": "Tomó líquidos y permaneció activa", "createdAt": "2026-06-28T08:35:00-03:00", "reviewedByUserId": "10000000-0000-4000-8000-000000000002", "reviewedAt": "2026-06-28T09:35:00-03:00" },
+      { "id": "81000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "guardianUserId": "10000000-0000-4000-8000-000000000006", "periodFrom": "2026-08-28T15:00:00-03:00", "periodUntil": "2026-08-28T18:10:00-03:00", "notes": "Respira más rápido al acostarse", "createdAt": "2026-08-28T18:12:00-03:00", "reviewedByUserId": "10000000-0000-4000-8000-000000000002", "reviewedAt": "2026-08-28T18:45:00-03:00" }
+    ],
+    "symptomItems": [
+      { "id": "81100000-0000-4000-8000-000000000001", "symptomReportId": "81000000-0000-4000-8000-000000000001", "symptomId": "80000000-0000-4000-8000-000000000001", "observedAt": "2026-06-27T22:00:00-03:00", "intensity": 3, "temperatureC": 38.6, "detail": null, "markedCritical": false },
+      { "id": "81100000-0000-4000-8000-000000000002", "symptomReportId": "81000000-0000-4000-8000-000000000001", "symptomId": "80000000-0000-4000-8000-000000000002", "observedAt": "2026-06-28T02:15:00-03:00", "intensity": 2, "temperatureC": null, "detail": "Un episodio", "markedCritical": false },
+      { "id": "81100000-0000-4000-8000-000000000003", "symptomReportId": "81000000-0000-4000-8000-000000000002", "symptomId": "80000000-0000-4000-8000-000000000003", "observedAt": "2026-08-28T18:05:00-03:00", "intensity": 4, "temperatureC": null, "detail": "Se le marcan las costillas al respirar", "markedCritical": true }
+    ],
+    "medicalAlerts": [
+      { "id": "82000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "origin": "metrica_crecimiento", "priority": "critica", "status": "confirmada", "code": "PESO_BAJO_P10", "title": "Peso por debajo del percentil 10", "description": "El último peso registrado se encuentra por debajo del P10 para edad y sexo", "metricCode": "peso_kg", "observedValue": 13.0, "referenceThreshold": "P10 = 13.2 kg", "vitalSignId": "70000000-0000-4000-8000-000000000002", "assignedToUserId": "10000000-0000-4000-8000-000000000002", "generatedAt": "2026-08-18T09:33:02-03:00", "acknowledgedAt": "2026-08-18T09:34:00-03:00", "acknowledgedByUserId": "10000000-0000-4000-8000-000000000002", "escalationLevel": 0 },
+      { "id": "82000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "origin": "signo_vital", "priority": "critica", "status": "confirmada", "code": "FIEBRE_ALTA", "title": "Temperatura crítica", "description": "Temperatura de 39.2 °C, superior al umbral crítico configurado", "metricCode": "temperatura_c", "observedValue": 39.2, "referenceThreshold": "máximo crítico = 39.0 °C", "vitalSignId": "70000000-0000-4000-8000-000000000003", "assignedToUserId": "10000000-0000-4000-8000-000000000002", "generatedAt": "2026-08-28T18:47:02-03:00", "acknowledgedAt": "2026-08-28T18:47:20-03:00", "acknowledgedByUserId": "10000000-0000-4000-8000-000000000002", "escalationLevel": 0 },
+      { "id": "82000000-0000-4000-8000-000000000003", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "origin": "sintoma_critico", "priority": "critica", "status": "confirmada", "code": "DIFICULTAD_RESPIRATORIA", "title": "Síntoma urgente informado por tutor", "description": "El tutor informó dificultad respiratoria con tiraje", "symptomItemId": "81100000-0000-4000-8000-000000000003", "assignedToUserId": "10000000-0000-4000-8000-000000000002", "generatedAt": "2026-08-28T18:12:02-03:00", "acknowledgedAt": "2026-08-28T18:13:10-03:00", "acknowledgedByUserId": "10000000-0000-4000-8000-000000000002", "escalationLevel": 0 }
+    ],
+    "alertEvents": [
+      { "id": "82100000-0000-4000-8000-000000000001", "alertId": "82000000-0000-4000-8000-000000000001", "eventType": "generada", "userId": null, "detail": "Generada automáticamente al comparar con curva OMS", "occurredAt": "2026-08-18T09:33:02-03:00" },
+      { "id": "82100000-0000-4000-8000-000000000002", "alertId": "82000000-0000-4000-8000-000000000001", "eventType": "confirmada", "userId": "10000000-0000-4000-8000-000000000002", "detail": "Médico revisó la curva de crecimiento", "occurredAt": "2026-08-18T09:34:00-03:00" },
+      { "id": "82100000-0000-4000-8000-000000000003", "alertId": "82000000-0000-4000-8000-000000000002", "eventType": "confirmada", "userId": "10000000-0000-4000-8000-000000000002", "detail": "Atendida durante la guardia", "occurredAt": "2026-08-28T18:47:20-03:00" },
+      { "id": "82100000-0000-4000-8000-000000000004", "alertId": "82000000-0000-4000-8000-000000000003", "eventType": "confirmada", "userId": "10000000-0000-4000-8000-000000000002", "detail": "Se indicó concurrir a guardia", "occurredAt": "2026-08-28T18:13:10-03:00" }
+    ]
+  },
+  "interoperability": {
+    "labOrders": [
+      { "id": "91000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "encounterId": "52000000-0000-4000-8000-000000000001", "laboratoryId": "90000000-0000-4000-8000-000000000001", "doctorUserId": "10000000-0000-4000-8000-000000000002", "orderCode": "ORD-2026-000081", "details": { "tests": ["hemograma", "proteína C reactiva"] }, "status": "completada", "requestedAt": "2026-06-28T09:50:00-03:00", "completedAt": "2026-06-28T16:20:00-03:00" }
+    ],
+    "hl7Messages": [
+      { "id": "92000000-0000-4000-8000-000000000001", "laboratoryId": "90000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "labOrderId": "91000000-0000-4000-8000-000000000001", "direction": "saliente", "messageType": "ORM^O01", "hl7Version": "2.5.1", "controlId": "MSG-ORM-000081", "status": "procesado", "rawMessage": "MSH|^~\\&|SIGP|OBERA|LAB|OBERA|202606280950||ORM^O01|MSG-ORM-000081|P|2.5.1\\rPID|||55900101||GOMEZ^MARTINA\\rORC|NW|ORD-2026-000081", "checksumSha256": "5555555555555555555555555555555555555555555555555555555555555555", "receivedAt": "2026-06-28T09:50:01-03:00", "processedAt": "2026-06-28T09:50:02-03:00" },
+      { "id": "92000000-0000-4000-8000-000000000002", "laboratoryId": "90000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "labOrderId": "91000000-0000-4000-8000-000000000001", "direction": "entrante", "messageType": "ORU^R01", "hl7Version": "2.5.1", "controlId": "MSG-ORU-000081", "status": "procesado", "rawMessage": "MSH|^~\\&|LAB|OBERA|SIGP|OBERA|202606281620||ORU^R01|MSG-ORU-000081|P|2.5.1\\rPID|||55900101||GOMEZ^MARTINA\\rOBR|1|ORD-2026-000081||HEMOGRAMA", "checksumSha256": "6666666666666666666666666666666666666666666666666666666666666666", "receivedAt": "2026-06-28T16:20:01-03:00", "processedAt": "2026-06-28T16:20:03-03:00" }
+    ],
+    "externalStudies": [
+      { "id": "93000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "labOrderId": "91000000-0000-4000-8000-000000000001", "laboratoryId": "90000000-0000-4000-8000-000000000001", "hl7MessageId": "92000000-0000-4000-8000-000000000002", "uploadedByUserId": null, "source": "hl7_oru_r01", "studyType": "Hemograma y proteína C reactiva", "studyDate": "2026-06-28", "fileUrl": null, "mimeType": null, "fileSha256": null, "structuredResult": { "hemoglobinGdl": 12.4, "leukocytesMm3": 9800, "crpMgL": 7.2 }, "validationStatus": "validado", "validatedByUserId": "10000000-0000-4000-8000-000000000002", "validatedAt": "2026-06-28T17:05:00-03:00" },
+      { "id": "93000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "labOrderId": null, "laboratoryId": null, "hl7MessageId": null, "uploadedByUserId": "10000000-0000-4000-8000-000000000004", "source": "carga_manual", "studyType": "Radiografía de tórax", "studyDate": "2026-08-28", "fileUrl": "/mock-files/estudios/rx-torax-benjamin-silva.pdf", "mimeType": "application/pdf", "fileSha256": "7777777777777777777777777777777777777777777777777777777777777777", "structuredResult": null, "validationStatus": "pendiente", "validatedByUserId": null, "validatedAt": null }
+    ]
+  },
+  "communications": {
+    "notificationDevices": [
+      { "id": "a0000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000005", "platform": "android", "pushToken": "mock-fcm-token-ana-gomez", "smsPhone": "+543755555005", "active": true },
+      { "id": "a0000000-0000-4000-8000-000000000002", "userId": "10000000-0000-4000-8000-000000000006", "platform": "sms_only", "pushToken": null, "smsPhone": "+543755555006", "active": true }
+    ],
+    "medicationSchedules": [
+      { "id": "a1000000-0000-4000-8000-000000000001", "prescriptionItemId": "62000000-0000-4000-8000-000000000001", "guardianUserId": "10000000-0000-4000-8000-000000000005", "startsAt": "2026-06-28T14:00:00-03:00", "endsAt": "2026-07-08T14:00:00-03:00", "intervalHours": 8, "advanceMinutes": 30, "preferredChannel": "push", "active": false }
+    ],
+    "medicationAdministrations": [
+      { "id": "a1100000-0000-4000-8000-000000000001", "scheduleId": "a1000000-0000-4000-8000-000000000001", "scheduledFor": "2026-06-28T14:00:00-03:00", "status": "administrada", "confirmedByUserId": "10000000-0000-4000-8000-000000000005", "confirmedAt": "2026-06-28T14:04:00-03:00", "notes": "Dosis administrada sin inconvenientes" }
+    ],
+    "notifications": [
+      { "id": "a2000000-0000-4000-8000-000000000001", "recipientUserId": "10000000-0000-4000-8000-000000000005", "alertId": null, "medicationScheduleId": "a1000000-0000-4000-8000-000000000001", "appointmentId": null, "type": "recordatorio_medicacion", "title": "Próxima dosis en 30 minutos", "body": "Corresponde administrar 7 ml de Amoxicilina a Martina a las 14:00.", "priority": "advertencia", "scheduledFor": "2026-06-28T13:30:00-03:00", "status": "leida", "readAt": "2026-06-28T13:32:00-03:00" },
+      { "id": "a2000000-0000-4000-8000-000000000002", "recipientUserId": "10000000-0000-4000-8000-000000000006", "alertId": "82000000-0000-4000-8000-000000000003", "medicationScheduleId": null, "appointmentId": null, "type": "alerta_clinica", "title": "Concurra a guardia pediátrica", "body": "Se detectó un síntoma que requiere evaluación médica urgente.", "priority": "critica", "scheduledFor": "2026-08-28T18:12:03-03:00", "status": "entregada", "readAt": null },
+      { "id": "a2000000-0000-4000-8000-000000000003", "recipientUserId": "10000000-0000-4000-8000-000000000006", "alertId": null, "medicationScheduleId": null, "appointmentId": "51000000-0000-4000-8000-000000000002", "type": "confirmacion_turno", "title": "Turno confirmado", "body": "Control pediátrico confirmado para el 2 de septiembre a las 11:00.", "priority": null, "scheduledFor": "2026-08-29T10:05:03-03:00", "status": "entregada", "readAt": null }
+    ],
+    "notificationDeliveries": [
+      { "id": "a2100000-0000-4000-8000-000000000001", "notificationId": "a2000000-0000-4000-8000-000000000001", "channel": "push", "deviceId": "a0000000-0000-4000-8000-000000000001", "provider": "FCM-mock", "providerMessageId": "fcm-demo-001", "status": "entregada", "attempt": 1, "sentAt": "2026-06-28T13:30:00-03:00", "deliveredAt": "2026-06-28T13:30:01-03:00" },
+      { "id": "a2100000-0000-4000-8000-000000000002", "notificationId": "a2000000-0000-4000-8000-000000000002", "channel": "sms", "deviceId": "a0000000-0000-4000-8000-000000000002", "provider": "SMS-mock", "providerMessageId": "sms-demo-002", "status": "entregada", "attempt": 1, "sentAt": "2026-08-28T18:12:03-03:00", "deliveredAt": "2026-08-28T18:12:05-03:00" },
+      { "id": "a2100000-0000-4000-8000-000000000003", "notificationId": "a2000000-0000-4000-8000-000000000003", "channel": "sms", "deviceId": "a0000000-0000-4000-8000-000000000002", "provider": "SMS-mock", "providerMessageId": "sms-demo-003", "status": "entregada", "attempt": 1, "sentAt": "2026-08-29T10:05:03-03:00", "deliveredAt": "2026-08-29T10:05:05-03:00" }
+    ]
+  },
+  "audit": {
+    "hcdAccessLog": [
+      { "id": "b0000000-0000-4000-8000-000000000001", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000004", "action": "alta", "entity": "historias_clinicas", "entityId": "50000000-0000-4000-8000-000000000001", "reason": "Alta administrativa del paciente", "ipAddress": "192.0.2.10", "eventHash": "8888888888888888888888888888888888888888888888888888888888888888", "occurredAt": "2026-06-28T09:05:00-03:00" },
+      { "id": "b0000000-0000-4000-8000-000000000002", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000002", "action": "acceso", "entity": "historias_clinicas", "entityId": "50000000-0000-4000-8000-000000000001", "reason": "Atención pediátrica programada", "ipAddress": "192.0.2.20", "eventHash": "9999999999999999999999999999999999999999999999999999999999999999", "occurredAt": "2026-06-28T09:31:00-03:00" },
+      { "id": "b0000000-0000-4000-8000-000000000003", "clinicalRecordId": "50000000-0000-4000-8000-000000000001", "userId": "10000000-0000-4000-8000-000000000002", "action": "firma", "entity": "registros_consulta", "entityId": "53000000-0000-4000-8000-000000000001", "reason": "Cierre de consulta", "ipAddress": "192.0.2.20", "eventHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "occurredAt": "2026-06-28T09:56:30-03:00" },
+      { "id": "b0000000-0000-4000-8000-000000000004", "clinicalRecordId": "50000000-0000-4000-8000-000000000002", "userId": "10000000-0000-4000-8000-000000000002", "action": "firma", "entity": "registros_consulta", "entityId": "53000000-0000-4000-8000-000000000002", "reason": "Cierre de atención de guardia", "ipAddress": "192.0.2.21", "eventHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "occurredAt": "2026-08-28T19:24:00-03:00" }
+    ]
+  }
+}
