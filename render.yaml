@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: sigp-api
+    runtime: docker
+    dockerfilePath: ./backend-sigp-main-1/Dockerfile
+    dockerContext: ./backend-sigp-main-1
+    healthCheckPath: /docs
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false

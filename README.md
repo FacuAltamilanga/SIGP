@@ -30,6 +30,10 @@ npm run dev
 
 El frontend de producción se genera con `npm run build`. La configuración de Vite usa `/SIGP/` como base en producción y `/` durante desarrollo. El workflow `.github/workflows/deploy-pages.yml` publica automáticamente la rama `Frontend-V1.0`; en GitHub configurá Pages con la fuente `GitHub Actions` y las variables de entorno `VITE_API_URL` y `VITE_WS_URL` en `Settings > Environments > github-pages > Variables`.
 
+### Despliegue del backend
+
+Se recomienda Render (o cualquier servicio Docker compatible con FastAPI). El archivo `render.yaml` define el servicio y el `Dockerfile` ejecuta Uvicorn en el puerto dinámico `PORT`. Configurá en el servicio `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` y `CORS_ORIGINS`; este último debe incluir el dominio de GitHub Pages, por ejemplo `https://facualtamilanga.github.io`. La base MySQL debe ser accesible desde el servicio desplegado. Luego de obtener la URL HTTPS del backend, usala como `VITE_API_URL` y su equivalente `wss://` como `VITE_WS_URL` al compilar el frontend.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
