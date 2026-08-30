@@ -34,6 +34,12 @@ El frontend de producción se genera con `npm run build`. La configuración de V
 
 Se recomienda Render (o cualquier servicio Docker compatible con FastAPI). El archivo `render.yaml` define el servicio y el `Dockerfile` ejecuta Uvicorn en el puerto dinámico `PORT`. Configurá en el servicio `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` y `CORS_ORIGINS`; este último debe incluir el dominio de GitHub Pages, por ejemplo `https://facualtamilanga.github.io`. La base MySQL debe ser accesible desde el servicio desplegado. Luego de obtener la URL HTTPS del backend, usala como `VITE_API_URL` y su equivalente `wss://` como `VITE_WS_URL` al compilar el frontend.
 
+### Resumen de integración V1
+
+El flujo principal está compuesto por login JWT, agenda administrativa, búsqueda y carga de triaje, historia clínica digital, validación de medicamentos y monitor de alertas por WebSocket. Para una verificación end-to-end, levantá MySQL y FastAPI, configurá las variables de entorno y ejecutá el frontend con `npm run dev`. Probá primero `POST /api/auth/login`, luego las rutas según el rol devuelto y finalmente confirmá una alerta mediante `PATCH /api/alertas/{id}/confirmar`.
+
+Limitaciones conocidas de esta versión: el vademécum y el feed de alertas requieren conectar sus tablas/fuentes reales; la firma digital actual es una confirmación lógica; y las tablas `turnos` y `triajes` deben existir en el esquema MySQL desplegado.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
