@@ -8,6 +8,9 @@ import hashlib
 import hmac
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 import mysql.connector
 
 app = FastAPI(title="API SIGP")

@@ -1,5 +1,35 @@
 # React + TypeScript + Vite
 
+## Configuración SIGP
+
+El frontend toma las URLs desde variables Vite:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+VITE_WS_URL=ws://localhost:8000/ws
+```
+
+Para desarrollo se utiliza `.env.development`. Para producción, copiá `.env.production.example` como `.env.production` y reemplazá las URLs por las públicas del backend (`https` y `wss`). No guardes secretos en archivos del frontend: Vite los expone al navegador.
+
+El backend carga `backend-sigp-main-1/.env` mediante `python-dotenv`. Copiá `backend-sigp-main-1/.env.example` y configurá `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` y `CORS_ORIGINS`. El archivo `.env` del backend está excluido de Git.
+
+### Ejecución local
+
+```powershell
+# Backend
+cd backend-sigp-main-1
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Frontend (otra terminal, desde la raíz)
+npm install
+npm run dev
+```
+
+El frontend de producción se genera con `npm run build`; el despliegue a GitHub Pages se documentará en la Tarea 7.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
