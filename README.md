@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-El frontend de producción se genera con `npm run build`; el despliegue a GitHub Pages se documentará en la Tarea 7.
+El frontend de producción se genera con `npm run build`. La configuración de Vite usa `/SIGP/` como base en producción y `/` durante desarrollo. El workflow `.github/workflows/deploy-pages.yml` publica automáticamente la rama `Frontend-V1.0`; en GitHub configurá Pages con la fuente `GitHub Actions` y las variables de entorno `VITE_API_URL` y `VITE_WS_URL` en `Settings > Environments > github-pages > Variables`.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
