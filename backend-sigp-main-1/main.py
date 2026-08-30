@@ -1,28 +1,63 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime, timedelta
+import base64
+import hashlib
+import hmac
+import json
+import os
 import mysql.connector
-import uuid
 
-app = FastAPI(title="API SIGP - Sprint 1")
+app = FastAPI(title="API SIGP")
+
+API_PREFIX = "/api"
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-only-change-this-secret")
+DEMO_USERS = {
+    "admin@sigp.ar": ("admin123", "admin"),
+    "enfermeria@sigp.ar": ("enfermeria123", "enfermeria"),
+    "medico@sigp.ar": ("medico123", "medico"),
+}
 
 # Configurar CORS para que el Frontend (React) pueda hacer peticiones sin ser bloqueado
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En producción cambiar por la URL de React (ej. http://localhost:5173)
-    allow_credentials=True,
+    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Configuración de tu BD MySQL
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root", # Cambia por tu usuario
-    "password": "pepsibraidiota1", # Cambia por tu contraseña
-    "database": "sigp_db"
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "3306")),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "sigp_db"),
 }
+
+def _token_for(username: str, role: str) -> str:
+    payload = {"sub": username, "role": role, "exp": int((datetime.utcnow() + timedelta(hours=8)).timestamp())}
+    encoded = base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode()).decode().rstrip("=")
+    signature = hmac.new(JWT_SECRET.encode(), encoded.encode(), hashlib.sha256).digest()
+    return f"{encoded}.{base64.urlsafe_b64encode(signature).decode().rstrip('=')}"
+
+def current_user(authorization: Optional[str] = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Autenticación requerida.")
+    try:
+        encoded, provided = authorization[7:].split(".", 1)
+        expected = base64.urlsafe_b64encode(hmac.new(JWT_SECRET.encode(), encoded.encode(), hashlib.sha256).digest()).decode().rstrip("=")
+        if not hmac.compare_digest(provided, expected):
+            raise ValueError
+        payload = json.loads(base64.urlsafe_b64decode(encoded + "=="))
+        if int(payload.get("exp", 0)) < int(datetime.utcnow().timestamp()):
+            raise ValueError
+        return payload
+    except (ValueError, KeyError, json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(status_code=401, detail="Token inválido o expirado.")
 
 def get_db_connection():
     return mysql.connector.connect(**DB_CONFIG)
@@ -203,3 +238,109 @@ def obtener_consultas(dni: str):
     finally:
         cursor.close()
         conn.close()
+
+# --- CONTRATOS DE INTEGRACIÓN V1 ---
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TriajeRequest(BaseModel):
+    paciente_id: str
+    temperatura: float
+    frecuencia_cardiaca: float
+    saturacion_oxigeno: float
+    peso_kg: float
+    talla_cm: float
+
+class PrescriptionRequest(BaseModel):
+    nombre: str
+    dosis: str
+    frecuencia: str
+    duracion: str
+
+class HcdConsultationRequest(BaseModel):
+    motivo: str
+    diagnostico: str
+    plan: str
+    prescripciones: list[PrescriptionRequest] = []
+    firma_digital: bool = False
+
+@app.post("/api/auth/login")
+def login(credentials: LoginRequest):
+    configured = DEMO_USERS.get(credentials.username.lower())
+    if not configured or not hmac.compare_digest(credentials.password, configured[0]):
+        raise HTTPException(status_code=401, detail="Credenciales inválidas.")
+    return {"token": _token_for(credentials.username.lower(), configured[1]), "role": configured[1]}
+
+@app.get("/api/pacientes/buscar")
+def buscar_pacientes(q: str, user=Depends(current_user)):
+    if len(q.strip()) < 2:
+        raise HTTPException(status_code=422, detail="La búsqueda debe tener al menos 2 caracteres.")
+    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id_paciente AS id, nombre, apellido, dni, fecha_nacimiento FROM pacientes WHERE dni LIKE %s OR nombre LIKE %s OR apellido LIKE %s LIMIT 20", (f"%{q}%", f"%{q}%", f"%{q}%"))
+        return {"pacientes": cursor.fetchall()}
+    finally:
+        cursor.close(); conn.close()
+
+@app.get("/api/turnos")
+def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
+    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    try:
+        query = "SELECT * FROM turnos WHERE DATE(fecha_hora) = %s"
+        params = [fecha]
+        if consultorio_id != "all": query += " AND consultorio_id = %s"; params.append(consultorio_id)
+        query += " ORDER BY fecha_hora"
+        cursor.execute(query, tuple(params)); return {"turnos": cursor.fetchall()}
+    finally:
+        cursor.close(); conn.close()
+
+@app.post("/api/triaje")
+def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
+    if min(triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm) < 0:
+        raise HTTPException(status_code=422, detail="Los signos vitales no pueden ser negativos.")
+    conn = get_db_connection(); cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO triajes (id_paciente, temperatura, frecuencia_cardiaca, saturacion_oxigeno, peso_kg, talla_cm) VALUES (%s,%s,%s,%s,%s,%s)", (triaje.paciente_id, triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm)); conn.commit(); return {"mensaje": "Triaje guardado correctamente"}
+    finally:
+        cursor.close(); conn.close()
+
+@app.get("/api/pacientes/{paciente_id}/hcd")
+def obtener_hcd(paciente_id: str, user=Depends(current_user)):
+    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id_paciente AS id, nombre, apellido, dni, fecha_nacimiento FROM pacientes WHERE id_paciente = %s", (paciente_id,)); paciente = cursor.fetchone()
+        if not paciente: raise HTTPException(status_code=404, detail="Paciente no encontrado.")
+        cursor.execute("SELECT * FROM antecedentes_medicos WHERE id_paciente = %s", (paciente_id,)); antecedentes = cursor.fetchone() or {}
+        return {"paciente": paciente, "antecedentes": antecedentes, "curvas_crecimiento": {"peso": [], "talla": [], "perimetro_cefalico": []}}
+    finally:
+        cursor.close(); conn.close()
+
+@app.post("/api/hcd/{paciente_id}/consultas")
+def guardar_consulta_hcd(paciente_id: str, consulta: HcdConsultationRequest, user=Depends(current_user)):
+    if user.get("role") != "medico": raise HTTPException(status_code=403, detail="Solo un médico puede firmar consultas.")
+    if not consulta.firma_digital: raise HTTPException(status_code=422, detail="La firma digital es obligatoria.")
+    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT id_hcd FROM historias_clinicas_digitales WHERE id_paciente = %s AND estado = 'activa'", (paciente_id,)); hcd = cursor.fetchone()
+        if not hcd: raise HTTPException(status_code=404, detail="Historia clínica activa no encontrada.")
+        cursor.execute("INSERT INTO consultas_medicas (id_hcd, id_medico, motivo, descripcion_problema) VALUES (%s,%s,%s,%s)", (hcd["id_hcd"], user["sub"], consulta.motivo, f"Diagnóstico: {consulta.diagnostico}\nPlan: {consulta.plan}")); conn.commit(); return {"mensaje": "Consulta guardada y firmada digitalmente"}
+    finally:
+        cursor.close(); conn.close()
+
+@app.get("/api/vademecum/buscar")
+def buscar_vademecum(q: str, paciente_id: str, user=Depends(current_user)):
+    return {"medicamentos": []}
+
+@app.patch("/api/alertas/{alerta_id}/confirmar")
+def confirmar_alerta(alerta_id: str, user=Depends(current_user)):
+    return {"mensaje": "Alerta confirmada", "id": alerta_id}
+
+@app.websocket("/ws")
+async def alertas_websocket(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
