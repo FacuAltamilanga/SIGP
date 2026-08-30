@@ -1,6 +1,5 @@
 import { useState } from 'react';
-
-const API_URL = "http://localhost:8000/api";
+import { getApiUrl, getAuthHeaders } from './lib/auth';
 const ID_MEDICO_PRUEBA = "69510217-7363-11f1-9477-19bb61b157a0"; // ← pegá el UUID de tu tabla medicos
 
 type TipoPaciente = 'nuevo' | 'registrado';
@@ -73,9 +72,11 @@ export const RegistroConsulta = () => {
         };
       }
 
-      const response = await fetch(`${API_URL}/consultas`, {
+      const headers = new Headers(getAuthHeaders());
+      headers.set('Content-Type', 'application/json');
+      const response = await fetch(`${getApiUrl()}/consultas`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       });
 

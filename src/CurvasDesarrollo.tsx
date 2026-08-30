@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { getApiUrl, getAuthHeaders } from './lib/auth';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-
-const API_URL = "http://localhost:8000/api";
 
 export const CurvasDesarrollo: React.FC = () => {
   const [dniBusqueda, setDniBusqueda] = useState("");
@@ -21,7 +20,7 @@ export const CurvasDesarrollo: React.FC = () => {
     setPacienteEncontrado(false);
 
     try {
-      const response = await fetch(`${API_URL}/pacientes/${dniBusqueda}/evolucion?metrica=peso`);
+      const response = await fetch(`${getApiUrl()}/pacientes/${encodeURIComponent(dniBusqueda)}/evolucion?metrica=peso`, { headers: getAuthHeaders() });
       
       if (response.status === 404) {
         setError("Paciente no encontrado.");

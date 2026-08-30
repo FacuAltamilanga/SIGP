@@ -1,6 +1,5 @@
 import { useState } from 'react';
-
-const API_URL = "http://localhost:8000/api";
+import { getApiUrl, getAuthHeaders } from './lib/auth';
 
 const METRICAS = [
   { valor: 'peso',       etiqueta: 'Peso',        unidad: 'kg' },
@@ -27,7 +26,7 @@ export const CargarMedicion = () => {
     setCargando(true);
     setMensaje('');
     try {
-      const res = await fetch(`${API_URL}/pacientes/${dni}/consultas`);
+      const res = await fetch(`${getApiUrl()}/pacientes/${encodeURIComponent(dni)}/consultas`, { headers: getAuthHeaders() });
       if (!res.ok) {
         setMensaje('❌ Paciente no encontrado o sin consultas registradas.');
         setCargando(false);
@@ -51,9 +50,11 @@ export const CargarMedicion = () => {
     setCargando(true);
     setMensaje('');
     try {
-      const res = await fetch(`${API_URL}/mediciones`, {
+      const headers = new Headers(getAuthHeaders());
+      headers.set('Content-Type', 'application/json');
+      const res = await fetch(`${getApiUrl()}/mediciones`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           id_consulta: idConsultaSeleccionada,
           tipo_metrica: metrica,
