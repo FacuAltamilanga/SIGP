@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-El frontend de producción se genera con `npm run build`. La configuración de Vite usa `/SIGP/` como base en producción y `/` durante desarrollo. El workflow `.github/workflows/deploy-pages.yml` publica automáticamente la rama `Frontend-V1.0`; en GitHub configurá Pages con la fuente `GitHub Actions` y las variables de entorno `VITE_API_URL` y `VITE_WS_URL` en `Settings > Environments > github-pages > Variables`.
+El frontend de producción se genera con `npm run build`. La configuración de Vite usa rutas relativas (`./`) para que los assets funcionen en cualquier URL de proyecto de GitHub Pages, y `/` durante desarrollo. El workflow `.github/workflows/deploy-pages.yml` publica automáticamente la rama `Frontend-V1.0`; en GitHub configurá Pages con la fuente `GitHub Actions` y las variables de entorno `VITE_API_URL` y `VITE_WS_URL` en `Settings > Environments > github-pages > Variables`.
 
 ### Despliegue del backend
 
