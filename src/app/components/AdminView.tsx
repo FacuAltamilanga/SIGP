@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Clock3, RefreshCw, Search, ShieldCheck, Stethoscope, XCircle } from 'lucide-react';
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Clock3, Plus, RefreshCw, Search, ShieldCheck, Stethoscope, X, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getApiUrl, getAuthHeaders } from '../../lib/auth';
 import { LogoutButton } from './LogoutButton';
@@ -77,6 +77,10 @@ export function AdminView() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshIndex, setRefreshIndex] = useState(0);
+  const [showBooking, setShowBooking] = useState(false);
+  const [booking, setBooking] = useState({ nombre: '', dni: '', fecha: today, hora: '', tutor: '', obra_social: '', consultorio_id: '' });
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isBooking, setIsBooking] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,13 +119,37 @@ export function AdminView() {
     setSelectedDate(date.toISOString().slice(0, 10));
   }
 
-  return <main className="min-h-screen bg-slate-100 text-slate-800"><header className="border-b border-slate-200 bg-white px-5 py-4 sm:px-8"><div className="mx-auto flex max-w-7xl items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-md bg-blue-700 text-white"><ShieldCheck size={20} /></span><div><p className="text-lg font-bold leading-none text-slate-900">SIGP</p><p className="mt-1 text-[10px] font-medium tracking-wide text-slate-500">SISTEMA INTEGRAL DE GESTIÓN PEDIÁTRICA</p></div></div><LogoutButton /></div></header>
+  async function createAppointment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setBookingError(null); setIsBooking(true);
+    try {
+      const headers = new Headers(getAuthHeaders()); headers.set('Content-Type', 'application/json');
+      const response = await fetch(`${getApiUrl()}/turnos`, { method: 'POST', headers, body: JSON.stringify({ fecha: booking.fecha, hora: booking.hora, paciente: { nombre_completo: booking.nombre, dni: booking.dni }, nombre_paciente: booking.nombre, dni: booking.dni, tutor: booking.tutor, obra_social: booking.obra_social, consultorio_id: booking.consultorio_id || '1', cobertura: 'pending' }) });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.detail ?? 'No se pudo agendar el turno.');
+      const created = appointmentsFrom(payload)[0] ?? {
+        id: typeof payload === 'object' && payload && 'id' in payload ? String(payload.id) : `local-${Date.now()}`,
+        time: booking.hora,
+        patient: booking.nombre,
+        dni: booking.dni,
+        guardian: booking.tutor || 'Sin tutor informado',
+        insurer: booking.obra_social || 'Sin cobertura informada',
+        coverage: 'pending' as Coverage,
+        consultoryId: booking.consultorio_id || '1',
+        consultoryName: `Consultorio ${booking.consultorio_id || '1'}`,
+      };
+      if (booking.fecha === selectedDate) setAppointments((current) => [...current, created]);
+      setShowBooking(false); setBooking({ nombre: '', dni: '', fecha: selectedDate, hora: '', tutor: '', obra_social: '', consultorio_id: '' });
+    } catch (caughtError) { setBookingError(caughtError instanceof Error ? caughtError.message : 'No se pudo agendar el turno.'); }
+    finally { setIsBooking(false); }
+  }
+
+  return <main className="min-h-screen bg-slate-100 text-slate-800"><header className="border-b border-slate-200 bg-white px-5 py-4 sm:px-8"><div className="mx-auto flex max-w-7xl items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-9 place-items-center rounded-md bg-blue-700 text-white"><ShieldCheck size={20} /></span><div><p className="text-lg font-bold leading-none text-slate-900">SIGP</p><p className="mt-1 text-[10px] font-medium tracking-wide text-slate-500">SISTEMA INTEGRAL DE GESTIÓN PEDIÁTRICA</p></div></div><div className="flex items-center gap-2"><button className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800" type="button" onClick={() => { setBooking((current) => ({ ...current, fecha: selectedDate })); setShowBooking(true); }}><Plus size={16} />Registrar nuevo turno</button><LogoutButton /></div></div></header>
     <section className="mx-auto max-w-7xl px-5 py-7 sm:px-8"><div className="flex flex-col justify-between gap-4 md:flex-row md:items-start"><div><h1 className="text-2xl font-bold text-slate-900">Agenda de turnos</h1><p className="mt-1 capitalize text-sm text-slate-500">{dateLabel(selectedDate)}</p></div><button className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50" type="button" onClick={() => setRefreshIndex((value) => value + 1)} disabled={isLoading}><RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />Actualizar</button></div>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric icon={<CalendarDays size={19} />} label="Turnos del día" value={appointments.length} tone="blue" /><Metric icon={<CheckCircle2 size={19} />} label="Cobertura autorizada" value={authorizedCount} tone="green" /><Metric icon={<CircleAlert size={19} />} label="Restricciones" value={restrictedCount} tone="orange" /><Metric icon={<Clock3 size={19} />} label="Pendientes" value={pendingCount} tone="slate" /></div>
       <section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center"><div className="flex items-center gap-2"><button className="rounded-md p-2 hover:bg-slate-100" type="button" aria-label="Día anterior" onClick={() => changeDay(-1)}><ChevronLeft size={18} /></button><input className="rounded-md border border-slate-300 px-3 py-2 text-sm" type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /><button className="rounded-md p-2 hover:bg-slate-100" type="button" aria-label="Día siguiente" onClick={() => changeDay(1)}><ChevronRight size={18} /></button></div><select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={consultoryId} onChange={(event) => setConsultoryId(event.target.value)}><option value="all">Todos los consultorios</option>{consultories.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select><label className="relative block flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} /><input className="w-full rounded-md border border-slate-300 py-2 pl-9 pr-3 text-sm" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por paciente, DNI, tutor u obra social" /></label></div>
         {error && <p className="m-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
         <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3 font-semibold">Hora</th><th className="px-5 py-3 font-semibold">Paciente</th><th className="px-5 py-3 font-semibold">Tutor/a</th><th className="px-5 py-3 font-semibold">Obra social</th><th className="px-5 py-3 font-semibold">Cobertura</th></tr></thead><tbody className="divide-y divide-slate-100">{isLoading ? <tr><td className="px-5 py-10 text-center text-slate-500" colSpan={5}>Cargando agenda…</td></tr> : visibleAppointments.length === 0 ? <tr><td className="px-5 py-10 text-center text-slate-500" colSpan={5}>No hay turnos para los filtros seleccionados.</td></tr> : visibleAppointments.map((appointment) => <tr key={appointment.id} className="hover:bg-slate-50"><td className="whitespace-nowrap px-5 py-4 font-mono font-semibold text-blue-700">{appointment.time}</td><td className="px-5 py-4"><p className="font-semibold text-slate-900">{appointment.patient}</p><p className="mt-0.5 font-mono text-xs text-slate-500">DNI {appointment.dni}</p></td><td className="px-5 py-4 text-slate-600">{appointment.guardian}</td><td className="px-5 py-4 text-slate-600">{appointment.insurer}</td><td className="px-5 py-4"><CoverageBadge coverage={appointment.coverage} /></td></tr>)}</tbody></table></div></section>
-    </section></main>;
+    </section>{showBooking && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4"><section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"><div className="flex items-center justify-between"><h2 className="text-xl font-bold text-slate-900">Registrar nuevo turno</h2><button type="button" onClick={() => setShowBooking(false)} aria-label="Cerrar"><X size={20} /></button></div><form className="mt-5 grid gap-4 sm:grid-cols-2" onSubmit={createAppointment}><BookingInput label="Paciente" value={booking.nombre} onChange={(value) => setBooking({ ...booking, nombre: value })} required /><BookingInput label="DNI" value={booking.dni} onChange={(value) => setBooking({ ...booking, dni: value })} required /><BookingInput label="Fecha" type="date" value={booking.fecha} onChange={(value) => setBooking({ ...booking, fecha: value })} required /><BookingInput label="Hora" type="time" value={booking.hora} onChange={(value) => setBooking({ ...booking, hora: value })} required /><BookingInput label="Tutor/a" value={booking.tutor} onChange={(value) => setBooking({ ...booking, tutor: value })} /><BookingInput label="Obra social" value={booking.obra_social} onChange={(value) => setBooking({ ...booking, obra_social: value })} /><BookingInput label="Consultorio" value={booking.consultorio_id} onChange={(value) => setBooking({ ...booking, consultorio_id: value })} placeholder="1" />{bookingError && <p className="sm:col-span-2 rounded-md bg-red-50 p-2 text-sm text-red-700" role="alert">{bookingError}</p>}<div className="flex justify-end gap-2 sm:col-span-2"><button className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold" type="button" onClick={() => setShowBooking(false)}>Cancelar</button><button className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" type="submit" disabled={isBooking}>{isBooking ? 'Agendando…' : 'Agendar turno'}</button></div></form></section></div>}</main>;
 }
 
 function Metric({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: 'blue' | 'green' | 'orange' | 'slate' }) {
@@ -134,3 +162,5 @@ function CoverageBadge({ coverage }: { coverage: Coverage }) {
   if (coverage === 'restricted') return <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-700"><XCircle size={14} />Restringida</span>;
   return <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"><Stethoscope size={14} />Pendiente</span>;
 }
+
+function BookingInput({ label, value, onChange, type = 'text', required = false, placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; placeholder?: string }) { return <label className="text-sm font-semibold text-slate-700">{label}<input className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-normal" type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} placeholder={placeholder} /></label>; }
