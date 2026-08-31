@@ -11,7 +11,8 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-import mysql.connector
+import psycopg
+from psycopg.rows import dict_row
 
 app = FastAPI(title="API SIGP")
 
@@ -33,12 +34,13 @@ app.add_middleware(
 )
 
 # Configuración de tu BD MySQL
+DATABASE_URL = os.getenv("DATABASE_URL")
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", "3306")),
-    "user": os.getenv("DB_USER", "root"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "user": os.getenv("DB_USER", "postgres"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME", "sigp_db"),
+    "dbname": os.getenv("DB_NAME", "sigp_db"),
 }
 
 def _token_for(username: str, role: str) -> str:
@@ -63,7 +65,10 @@ def current_user(authorization: Optional[str] = Header(default=None)):
         raise HTTPException(status_code=401, detail="Token inválido o expirado.")
 
 def get_db_connection():
-    return mysql.connector.connect(**DB_CONFIG)
+    return psycopg.connect(DATABASE_URL) if DATABASE_URL else psycopg.connect(**DB_CONFIG)
+
+def get_dict_cursor(conn):
+    return conn.cursor(row_factory=dict_row)
 
 # --- MODELOS DE DATOS (Lo que el frontend debe enviar) ---
 
@@ -91,7 +96,7 @@ class NuevaConsulta(BaseModel):
 @app.post("/api/consultas")
 def registrar_consulta(consulta: NuevaConsulta):
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = get_dict_cursor(conn)
     
     try:
         # 1. Buscar si el paciente existe
@@ -151,7 +156,7 @@ def registrar_consulta(consulta: NuevaConsulta):
         conn.commit()
         return {"mensaje": "Consulta registrada exitosamente"}
         
-    except mysql.connector.Error as err:
+    except psycopg.Error as err:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(err)}")
     finally:
@@ -164,7 +169,7 @@ def registrar_consulta(consulta: NuevaConsulta):
 def obtener_evolucion(dni: str, metrica: str):
     # metrica puede ser 'peso', 'colesterol', etc.
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = get_dict_cursor(conn)
     
     try:
         query = """
@@ -200,7 +205,7 @@ class NuevaMedicion(BaseModel):
 @app.post("/api/mediciones")
 def registrar_medicion(medicion: NuevaMedicion):
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = get_dict_cursor(conn)
     try:
         # Verificar que la consulta existe
         cursor.execute("SELECT id_consulta FROM consultas_medicas WHERE id_consulta = %s", (medicion.id_consulta,))
@@ -213,7 +218,7 @@ def registrar_medicion(medicion: NuevaMedicion):
         """, (medicion.id_consulta, medicion.tipo_metrica, medicion.valor, medicion.unidad))
         conn.commit()
         return {"mensaje": "Medición registrada exitosamente"}
-    except mysql.connector.Error as err:
+    except psycopg.Error as err:
         conn.rollback()
         raise HTTPException(status_code=500, detail=f"Error en la base de datos: {str(err)}")
     finally:
@@ -224,7 +229,7 @@ def registrar_medicion(medicion: NuevaMedicion):
 @app.get("/api/pacientes/{dni}/consultas")
 def obtener_consultas(dni: str):
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = get_dict_cursor(conn)
     try:
         cursor.execute("""
             SELECT cm.id_consulta, cm.motivo, cm.fecha_hora
@@ -279,7 +284,7 @@ def login(credentials: LoginRequest):
 def buscar_pacientes(q: str, user=Depends(current_user)):
     if len(q.strip()) < 2:
         raise HTTPException(status_code=422, detail="La búsqueda debe tener al menos 2 caracteres.")
-    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
         cursor.execute("SELECT id_paciente AS id, nombre, apellido, dni, fecha_nacimiento FROM pacientes WHERE dni LIKE %s OR nombre LIKE %s OR apellido LIKE %s LIMIT 20", (f"%{q}%", f"%{q}%", f"%{q}%"))
         return {"pacientes": cursor.fetchall()}
@@ -288,7 +293,7 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
 
 @app.get("/api/turnos")
 def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
-    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
         query = "SELECT * FROM turnos WHERE DATE(fecha_hora) = %s"
         params = [fecha]
@@ -310,7 +315,7 @@ def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
 
 @app.get("/api/pacientes/{paciente_id}/hcd")
 def obtener_hcd(paciente_id: str, user=Depends(current_user)):
-    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
         cursor.execute("SELECT id_paciente AS id, nombre, apellido, dni, fecha_nacimiento FROM pacientes WHERE id_paciente = %s", (paciente_id,)); paciente = cursor.fetchone()
         if not paciente: raise HTTPException(status_code=404, detail="Paciente no encontrado.")
@@ -323,7 +328,7 @@ def obtener_hcd(paciente_id: str, user=Depends(current_user)):
 def guardar_consulta_hcd(paciente_id: str, consulta: HcdConsultationRequest, user=Depends(current_user)):
     if user.get("role") != "medico": raise HTTPException(status_code=403, detail="Solo un médico puede firmar consultas.")
     if not consulta.firma_digital: raise HTTPException(status_code=422, detail="La firma digital es obligatoria.")
-    conn = get_db_connection(); cursor = conn.cursor(dictionary=True)
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
         cursor.execute("SELECT id_hcd FROM historias_clinicas_digitales WHERE id_paciente = %s AND estado = 'activa'", (paciente_id,)); hcd = cursor.fetchone()
         if not hcd: raise HTTPException(status_code=404, detail="Historia clínica activa no encontrada.")

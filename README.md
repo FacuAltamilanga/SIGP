@@ -11,7 +11,7 @@ VITE_WS_URL=ws://localhost:8000/ws
 
 Para desarrollo se utiliza `.env.development`. Para producción, copiá `.env.production.example` como `.env.production` y reemplazá las URLs por las públicas del backend (`https` y `wss`). No guardes secretos en archivos del frontend: Vite los expone al navegador.
 
-El backend carga `backend-sigp-main-1/.env` mediante `python-dotenv`. Copiá `backend-sigp-main-1/.env.example` y configurá `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `JWT_SECRET` y `CORS_ORIGINS`. El archivo `.env` del backend está excluido de Git.
+El backend carga `backend-sigp-main-1/.env` mediante `python-dotenv` y utiliza PostgreSQL a través de `psycopg`. Copiá `backend-sigp-main-1/.env.example` y configurá `DATABASE_URL` (o las variables `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`), además de `JWT_SECRET` y `CORS_ORIGINS`. El archivo `.env` del backend está excluido de Git.
 
 ### Ejecución local
 
