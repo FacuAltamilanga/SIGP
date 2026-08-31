@@ -5,6 +5,7 @@ import { AdminView } from './app/components/AdminView';
 import { NursingView } from './app/components/NursingView';
 import { DoctorView } from './app/components/DoctorView';
 import { AlertsPanel } from './app/components/AlertsPanel';
+import { LogoutButton } from './app/components/LogoutButton';
 import { ProtectedRoute } from './app/components/ProtectedRoute';
 import { getUserRole, type UserRole } from './lib/auth';
 
@@ -16,7 +17,7 @@ function RoleHomeRedirect() {
 }
 
 function ClinicalScreen({ children }: { children: ReactNode }) {
-  return <><div className="xl:pr-80">{children}</div><AlertsPanel /></>;
+  return <><div className="relative xl:pr-80">{children}<div className="fixed right-4 top-4 z-50 xl:right-84"><LogoutButton /></div></div><AlertsPanel /></>;
 }
 
 function AppRoutes() {
