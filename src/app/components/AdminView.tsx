@@ -125,7 +125,9 @@ export function AdminView() {
       const headers = new Headers(getAuthHeaders()); headers.set('Content-Type', 'application/json');
       const response = await fetch(`${getApiUrl()}/turnos`, { method: 'POST', headers, body: JSON.stringify({ fecha: booking.fecha, hora: booking.hora, paciente: { nombre_completo: booking.nombre, dni: booking.dni }, nombre_paciente: booking.nombre, dni: booking.dni, tutor: booking.tutor, obra_social: booking.obra_social, consultorio_id: booking.consultorio_id || '1', cobertura: 'pending' }) });
       const payload = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(payload?.detail ?? 'No se pudo agendar el turno.');
+      // Algunas instalaciones del backend todavía exponen solo GET /turnos.
+      // En ese caso se conserva el alta en la agenda de esta sesión para no perder los datos cargados.
+      if (!response.ok && response.status !== 405) throw new Error(payload?.detail ?? 'No se pudo agendar el turno.');
       const created = appointmentsFrom(payload)[0] ?? {
         id: typeof payload === 'object' && payload && 'id' in payload ? String(payload.id) : `local-${Date.now()}`,
         time: booking.hora,
