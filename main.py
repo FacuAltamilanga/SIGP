@@ -24,10 +24,19 @@ DEMO_USERS = {
     "medico@sigp.ar": ("medico123", "medico"),
 }
 
+# UUID de las entidades creadas por migrations/001_seed_demo_data.sql.
+# Se configuran como variables de entorno en Render.
+SIGP_SEDE_CLINICA_ID = os.getenv("SIGP_SEDE_CLINICA_ID")
+SIGP_USER_IDS = {
+    "admin": os.getenv("SIGP_ADMIN_USER_ID"),
+    "enfermeria": os.getenv("SIGP_ENFERMERIA_USER_ID"),
+    "medico": os.getenv("SIGP_MEDICO_USER_ID"),
+}
+
 # Configurar CORS para que el Frontend (React) pueda hacer peticiones sin ser bloqueado
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()],
+    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,https://facualtamilanga.github.io").split(",") if origin.strip()],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,6 +69,7 @@ def current_user(authorization: Optional[str] = Header(default=None)):
         payload = json.loads(base64.urlsafe_b64decode(encoded + "=="))
         if int(payload.get("exp", 0)) < int(datetime.utcnow().timestamp()):
             raise ValueError
+        payload["user_id"] = SIGP_USER_IDS.get(payload.get("role"))
         return payload
     except (ValueError, KeyError, json.JSONDecodeError, UnicodeDecodeError):
         raise HTTPException(status_code=401, detail="Token inválido o expirado.")
@@ -94,13 +104,15 @@ class NuevaConsulta(BaseModel):
 # --- ENDPOINT 1: REGISTRAR CONSULTA (Y PACIENTE SI ES NUEVO) ---
 
 @app.post("/api/consultas")
-def registrar_consulta(consulta: NuevaConsulta):
+def registrar_consulta(consulta: NuevaConsulta, user=Depends(current_user)):
     conn = get_db_connection()
     cursor = get_dict_cursor(conn)
     
     try:
         # 1. Buscar si el paciente existe
-        cursor.execute("SELECT id_paciente FROM pacientes WHERE dni = %s", (consulta.dni_paciente,))
+        if not SIGP_SEDE_CLINICA_ID:
+            raise HTTPException(status_code=500, detail="SIGP_SEDE_CLINICA_ID no está configurado.")
+        cursor.execute("SELECT id FROM pacientes WHERE numero_documento = %s AND sede_clinica_id = %s", (consulta.dni_paciente, SIGP_SEDE_CLINICA_ID))
         paciente = cursor.fetchone()
         
         if not paciente:
@@ -111,46 +123,32 @@ def registrar_consulta(consulta: NuevaConsulta):
             datos = consulta.datos_paciente
             
             # A. Insertar Paciente
-            cursor.execute("""
-                INSERT INTO pacientes (dni, nombre, apellido, fecha_nacimiento, sexo)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (consulta.dni_paciente, datos.nombre, datos.apellido, datos.fecha_nacimiento, datos.sexo))
+            cursor.execute("INSERT INTO pacientes (sede_clinica_id, numero_documento, nombres, apellidos, fecha_nacimiento, sexo) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id", (SIGP_SEDE_CLINICA_ID, consulta.dni_paciente, datos.nombre, datos.apellido, datos.fecha_nacimiento, datos.sexo))
             
             # Recuperar el ID generado (Como usas UUID() en BD, lo buscamos de nuevo)
-            cursor.execute("SELECT id_paciente FROM pacientes WHERE dni = %s", (consulta.dni_paciente,))
-            id_paciente = cursor.fetchone()['id_paciente']
-            
-            # B. Insertar Antecedentes Médicos
-            cursor.execute("""
-                INSERT INTO antecedentes_medicos 
-                (id_paciente, cobertura_medica, enfermedades_previas, cirugias_internaciones, habitos, medicacion_habitual, alergias)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (id_paciente, datos.cobertura_medica, datos.enfermedades_previas, datos.cirugias_internaciones, datos.habitos, datos.medicacion_habitual, datos.alergias))
-            
-            # C. Crear la Historia Clínica Digital (Requisito para tu tabla de consultas)
-            cursor.execute("""
-                INSERT INTO historias_clinicas_digitales (id_paciente, estado)
-                VALUES (%s, 'activa')
-            """, (id_paciente,))
+            id_paciente = cursor.fetchone()['id']
+            cursor.execute("INSERT INTO historias_clinicas (paciente_id, sede_clinica_id, numero_historia, creada_por) VALUES (%s,%s,%s,%s)", (id_paciente, SIGP_SEDE_CLINICA_ID, f'HCD-{consulta.dni_paciente}', user.get('user_id')))
             
         # 2. Obtener el ID de la HCD del paciente (sea nuevo o viejo)
         cursor.execute("""
-            SELECT h.id_hcd FROM historias_clinicas_digitales h
-            JOIN pacientes p ON p.id_paciente = h.id_paciente
-            WHERE p.dni = %s
-        """, (consulta.dni_paciente,))
+            SELECT h.id FROM historias_clinicas h
+            JOIN pacientes p ON p.id = h.paciente_id
+            WHERE p.numero_documento = %s AND h.sede_clinica_id = %s AND h.estado = 'activa'
+        """, (consulta.dni_paciente, SIGP_SEDE_CLINICA_ID))
         hcd = cursor.fetchone()
         
         if not hcd:
             raise HTTPException(status_code=500, detail="El paciente no tiene una Historia Clínica activa.")
             
-        id_hcd = hcd['id_hcd']
+        id_hcd = hcd['id']
 
         # 3. Registrar la Consulta Médica
         cursor.execute("""
-            INSERT INTO consultas_medicas (id_hcd, id_medico, motivo, descripcion_problema)
-            VALUES (%s, %s, %s, %s)
-        """, (id_hcd, consulta.id_medico, consulta.motivo_consulta, consulta.descripcion_problema))
+            INSERT INTO atenciones (historia_clinica_id, tipo, medico_usuario_id, admitida_por)
+            VALUES (%s, 'consulta', %s, %s) RETURNING id
+        """, (id_hcd, consulta.id_medico, user.get('user_id') or consulta.id_medico))
+        atencion_id = cursor.fetchone()['id']
+        cursor.execute("INSERT INTO registros_consulta (historia_clinica_id, atencion_id, medico_usuario_id, motivo_consulta, diagnostico_resumen, prescripcion_resumen, plan_seguimiento) VALUES (%s,%s,%s,%s,%s,%s,%s)", (id_hcd, atencion_id, consulta.id_medico, consulta.motivo_consulta, consulta.descripcion_problema, 'Sin prescripción', 'Seguimiento según evolución'))
         
         # Confirmar todos los cambios (Transacción)
         conn.commit()
@@ -172,16 +170,10 @@ def obtener_evolucion(dni: str, metrica: str):
     cursor = get_dict_cursor(conn)
     
     try:
-        query = """
-            SELECT mp.fecha_hora, mp.valor, mp.unidad
-            FROM mediciones_paciente mp
-            JOIN consultas_medicas cm ON cm.id_consulta = mp.id_consulta
-            JOIN historias_clinicas_digitales hcd ON hcd.id_hcd = cm.id_hcd
-            JOIN pacientes p ON p.id_paciente = hcd.id_paciente
-            WHERE p.dni = %s AND mp.tipo_metrica = %s
-            ORDER BY mp.fecha_hora ASC
-        """
-        cursor.execute(query, (dni, metrica))
+        column = {'peso': 'peso_kg', 'peso_kg': 'peso_kg', 'talla': 'talla_cm', 'talla_cm': 'talla_cm', 'temperatura': 'temperatura_c', 'frecuencia_cardiaca': 'frecuencia_cardiaca_lpm', 'saturacion_oxigeno': 'saturacion_oxigeno_pct'}.get(metrica)
+        if not column: raise HTTPException(status_code=422, detail='Métrica no soportada.')
+        query = f"SELECT sv.registrado_en AS fecha_hora, sv.{column} AS valor, %s AS unidad FROM signos_vitales sv JOIN historias_clinicas h ON h.id = sv.historia_clinica_id JOIN pacientes p ON p.id = h.paciente_id WHERE p.numero_documento = %s AND sv.{column} IS NOT NULL ORDER BY sv.registrado_en ASC"
+        cursor.execute(query, (metrica, dni))
         resultados = cursor.fetchall()
         
         return {
@@ -203,19 +195,18 @@ class NuevaMedicion(BaseModel):
 
 # --- ENDPOINT: CARGAR MEDICIÓN ---
 @app.post("/api/mediciones")
-def registrar_medicion(medicion: NuevaMedicion):
+def registrar_medicion(medicion: NuevaMedicion, user=Depends(current_user)):
     conn = get_db_connection()
     cursor = get_dict_cursor(conn)
     try:
         # Verificar que la consulta existe
-        cursor.execute("SELECT id_consulta FROM consultas_medicas WHERE id_consulta = %s", (medicion.id_consulta,))
-        if not cursor.fetchone():
+        column = {'peso': 'peso_kg', 'talla': 'talla_cm', 'temperatura': 'temperatura_c', 'frecuencia_cardiaca': 'frecuencia_cardiaca_lpm', 'saturacion_oxigeno': 'saturacion_oxigeno_pct'}.get(medicion.tipo_metrica)
+        if not column: raise HTTPException(status_code=422, detail='Métrica no soportada.')
+        cursor.execute("SELECT historia_clinica_id FROM atenciones WHERE id = %s", (medicion.id_consulta,))
+        atencion = cursor.fetchone()
+        if not atencion:
             raise HTTPException(status_code=404, detail="La consulta no existe.")
-
-        cursor.execute("""
-            INSERT INTO mediciones_paciente (id_consulta, tipo_metrica, valor, unidad)
-            VALUES (%s, %s, %s, %s)
-        """, (medicion.id_consulta, medicion.tipo_metrica, medicion.valor, medicion.unidad))
+        cursor.execute(f"INSERT INTO signos_vitales (historia_clinica_id, atencion_id, registrado_por, edad_dias, {column}) VALUES (%s,%s,%s,0,%s)", (atencion['historia_clinica_id'], medicion.id_consulta, user.get('user_id'), medicion.valor))
         conn.commit()
         return {"mensaje": "Medición registrada exitosamente"}
     except psycopg.Error as err:
@@ -232,12 +223,11 @@ def obtener_consultas(dni: str):
     cursor = get_dict_cursor(conn)
     try:
         cursor.execute("""
-            SELECT cm.id_consulta, cm.motivo, cm.fecha_hora
-            FROM consultas_medicas cm
-            JOIN historias_clinicas_digitales hcd ON hcd.id_hcd = cm.id_hcd
-            JOIN pacientes p ON p.id_paciente = hcd.id_paciente
-            WHERE p.dni = %s
-            ORDER BY cm.fecha_hora DESC
+            SELECT a.id AS id_consulta, rc.motivo_consulta AS motivo, a.admitida_en AS fecha_hora
+            FROM atenciones a JOIN historias_clinicas h ON h.id = a.historia_clinica_id
+            JOIN registros_consulta rc ON rc.atencion_id = a.id
+            JOIN pacientes p ON p.id = h.paciente_id
+            WHERE p.numero_documento = %s ORDER BY a.admitida_en DESC
         """, (dni,))
         consultas = cursor.fetchall()
         if not consultas:
@@ -286,7 +276,7 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
         raise HTTPException(status_code=422, detail="La búsqueda debe tener al menos 2 caracteres.")
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        cursor.execute("SELECT id_paciente AS id, nombre, apellido, dni, fecha_nacimiento FROM pacientes WHERE dni LIKE %s OR nombre LIKE %s OR apellido LIKE %s LIMIT 20", (f"%{q}%", f"%{q}%", f"%{q}%"))
+        cursor.execute("SELECT id, nombres AS nombre, apellidos AS apellido, numero_documento AS dni, fecha_nacimiento FROM pacientes WHERE numero_documento ILIKE %s OR nombres ILIKE %s OR apellidos ILIKE %s LIMIT 20", (f"%{q}%", f"%{q}%", f"%{q}%"))
         return {"pacientes": cursor.fetchall()}
     finally:
         cursor.close(); conn.close()
@@ -295,7 +285,7 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
 def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        query = "SELECT * FROM turnos WHERE DATE(fecha_hora) = %s"
+        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, NULL AS nombre_paciente, NULL AS dni, NULL AS tutor, NULL AS obra_social, NULL AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
         params = [fecha]
         if consultorio_id != "all": query += " AND consultorio_id = %s"; params.append(consultorio_id)
         query += " ORDER BY fecha_hora"
@@ -309,7 +299,9 @@ def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
         raise HTTPException(status_code=422, detail="Los signos vitales no pueden ser negativos.")
     conn = get_db_connection(); cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO triajes (id_paciente, temperatura, frecuencia_cardiaca, saturacion_oxigeno, peso_kg, talla_cm) VALUES (%s,%s,%s,%s,%s,%s)", (triaje.paciente_id, triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm)); conn.commit(); return {"mensaje": "Triaje guardado correctamente"}
+        cursor.execute("SELECT id FROM historias_clinicas WHERE paciente_id = %s AND sede_clinica_id = %s AND estado = 'activa'", (triaje.paciente_id, SIGP_SEDE_CLINICA_ID)); history = cursor.fetchone()
+        if not history: raise HTTPException(status_code=404, detail="El paciente no tiene historia clínica activa.")
+        cursor.execute("INSERT INTO signos_vitales (historia_clinica_id, registrado_por, edad_dias, temperatura_c, frecuencia_cardiaca_lpm, saturacion_oxigeno_pct, peso_kg, talla_cm) VALUES (%s,%s,0,%s,%s,%s,%s,%s)", (history['id'], user.get('user_id'), triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm)); conn.commit(); return {"mensaje": "Triaje guardado correctamente"}
     finally:
         cursor.close(); conn.close()
 
