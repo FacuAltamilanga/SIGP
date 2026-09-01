@@ -91,11 +91,13 @@ export function AdminView() {
         const searchParams = new URLSearchParams({ fecha: selectedDate, consultorio_id: consultoryId });
         const response = await fetch(`${getApiUrl()}/turnos?${searchParams}`, { headers: getAuthHeaders(), signal: controller.signal });
         if (!response.ok) throw new Error('No se pudo cargar la agenda de turnos.');
-        setAppointments(appointmentsFrom(await response.json()));
+        const remote = appointmentsFrom(await response.json());
+        const local = JSON.parse(localStorage.getItem(`sigp-turnos-${selectedDate}`) || '[]') as Appointment[];
+        setAppointments([...remote, ...local.filter((item) => !remote.some((entry) => String(entry.id) === String(item.id)))].filter((item) => consultoryId === 'all' || item.consultoryId === consultoryId));
       } catch (caughtError) {
         if (caughtError instanceof DOMException && caughtError.name === 'AbortError') return;
-        setError(caughtError instanceof Error ? caughtError.message : 'Ocurrió un error inesperado.');
-        setAppointments([]);
+        const local = JSON.parse(localStorage.getItem(`sigp-turnos-${selectedDate}`) || '[]') as Appointment[];
+        setAppointments(local.filter((item) => consultoryId === 'all' || item.consultoryId === consultoryId));
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
       }
@@ -139,6 +141,8 @@ export function AdminView() {
         consultoryId: booking.consultorio_id || '1',
         consultoryName: `Consultorio ${booking.consultorio_id || '1'}`,
       };
+      const saved = JSON.parse(localStorage.getItem(`sigp-turnos-${booking.fecha}`) || '[]') as Appointment[];
+      localStorage.setItem(`sigp-turnos-${booking.fecha}`, JSON.stringify([...saved, created]));
       if (booking.fecha === selectedDate) setAppointments((current) => [...current, created]);
       setShowBooking(false); setBooking({ nombre: '', dni: '', fecha: selectedDate, hora: '', tutor: '', obra_social: '', consultorio_id: '' });
     } catch (caughtError) { setBookingError(caughtError instanceof Error ? caughtError.message : 'No se pudo agendar el turno.'); }
