@@ -65,8 +65,20 @@ export function NursingView() {
       const results = patientsFrom(payload);
       setPatients(results);
       if (results.length === 0) setSearchMessage('No se encontraron pacientes con esos datos.');
-    } catch (caughtError) {
-      setSearchMessage(caughtError instanceof Error ? caughtError.message : 'No se pudo realizar la búsqueda.');
+    } catch {
+      const localPatients: Patient[] = [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key?.startsWith('sigp-turnos-')) continue;
+        const records = JSON.parse(localStorage.getItem(key) || '[]') as Array<{ patient?: string; dni?: string; id?: string | number }>;
+        records.forEach((record) => {
+          if (record.patient && `${record.patient} ${record.dni ?? ''}`.toLocaleLowerCase('es-AR').includes(query.toLocaleLowerCase('es-AR')) && !localPatients.some((item) => item.id === String(record.id))) {
+            localPatients.push({ id: String(record.id ?? record.dni), name: record.patient, dni: String(record.dni ?? 'Sin DNI') });
+          }
+        });
+      }
+      setPatients(localPatients);
+      setSearchMessage(localPatients.length ? 'Paciente encontrado en la agenda local.' : 'No se pudo conectar con el servidor de pacientes.');
     } finally { setIsSearching(false); }
   }
 
