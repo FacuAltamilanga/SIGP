@@ -152,7 +152,7 @@ export function AdminView() {
       const response = await fetch(`${getApiUrl()}/turnos/${id}/${action}`, options);
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.detail ?? `No se pudo ${action} el turno.`);
-      setAppointments((current) => current.map((appointment) => String(appointment.id) === String(id) ? { ...appointment, status: payload?.estado ?? (isCancellation ? 'cancelado' : 'completado') } : appointment));
+      setAppointments((current) => current.filter((appointment) => String(appointment.id) !== String(id)));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : 'No se pudo actualizar el turno.');
     }

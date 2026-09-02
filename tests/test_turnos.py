@@ -22,6 +22,9 @@ class FakeCursor:
     def fetchone(self):
         return next(self.rows)
 
+    def fetchall(self):
+        return list(self.rows)
+
     def close(self):
         pass
 
@@ -146,6 +149,16 @@ class CrearTurnoTests(unittest.TestCase):
         self.assertTrue(connection.committed)
         self.assertEqual(response["estado"], "completado")
         self.assertIn("estado = 'completado'", connection.cursor_instance.executions[0][0])
+
+    def test_lista_paciente_y_oculta_turnos_no_activos(self):
+        connection = FakeConnection([{"id": TURNO_ID, "hora": "10:30", "nombre_paciente": "Ana Gómez", "dni": "50123457"}])
+        with patch.object(main, "get_db_connection", return_value=connection):
+            response = main.listar_turnos("2026-09-10", user={"user_id": "admin-demo"})
+
+        self.assertEqual(response["turnos"][0]["nombre_paciente"], "Ana Gómez")
+        statement = connection.cursor_instance.executions[0][0]
+        self.assertIn("JOIN pacientes", statement)
+        self.assertIn("t.estado IN", statement)
 
 
 if __name__ == "__main__":

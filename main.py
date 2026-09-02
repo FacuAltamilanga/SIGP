@@ -310,10 +310,18 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
 def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, estado, NULL AS nombre_paciente, NULL AS dni, tutor_nombre AS tutor, cobertura_medica AS obra_social, COALESCE(consultorio_nombre, 'Agenda general') AS consultorio, COALESCE(consultorio_nombre, 'general') AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
+        query = """SELECT t.id, TO_CHAR(t.fecha_hora_inicio AT TIME ZONE 'America/Argentina/Buenos_Aires', 'HH24:MI') AS hora,
+                          t.fecha_hora_inicio AS fecha_hora, t.paciente_id, t.medico_usuario_id, t.estado AS cobertura, t.estado,
+                          CONCAT_WS(' ', p.nombres, p.apellidos) AS nombre_paciente, p.numero_documento AS dni,
+                          t.tutor_nombre AS tutor, t.cobertura_medica AS obra_social,
+                          COALESCE(t.consultorio_nombre, 'Agenda general') AS consultorio,
+                          COALESCE(t.consultorio_nombre, 'general') AS consultorio_id
+                   FROM turnos t JOIN pacientes p ON p.id = t.paciente_id AND p.sede_clinica_id = t.sede_clinica_id
+                   WHERE DATE(t.fecha_hora_inicio) = %s
+                     AND t.estado IN ('solicitado', 'confirmado', 'arribado', 'en_atencion')"""
         params = [fecha]
-        if consultorio_id != "all": query += " AND consultorio_nombre = %s"; params.append(consultorio_id)
-        query += " ORDER BY fecha_hora"
+        if consultorio_id != "all": query += " AND t.consultorio_nombre = %s"; params.append(consultorio_id)
+        query += " ORDER BY t.fecha_hora_inicio"
         cursor.execute(query, tuple(params)); return {"turnos": cursor.fetchall()}
     finally:
         cursor.close(); conn.close()
