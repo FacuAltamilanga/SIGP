@@ -26,6 +26,13 @@ class FakeCursor:
         pass
 
 
+class ConflictCursor(FakeCursor):
+    def execute(self, query, params=None):
+        if "INSERT INTO turnos" in query:
+            raise main.psycopg.errors.ExclusionViolation()
+        super().execute(query, params)
+
+
 class FakeConnection:
     def __init__(self, rows):
         self.cursor_instance = FakeCursor(rows)
@@ -102,6 +109,17 @@ class CrearTurnoTests(unittest.TestCase):
 
         self.assertTrue(connection.committed)
         self.assertEqual(response["turnos"][0]["dni"], "50123457")
+
+    def test_informa_un_conflicto_de_horario_sin_exponer_el_error_de_postgresql(self):
+        connection = FakeConnection([{"id": PACIENTE_ID}])
+        connection.cursor_instance = ConflictCursor([{"id": PACIENTE_ID}])
+        with patch.object(main, "get_db_connection", return_value=connection), patch.object(main, "SIGP_SEDE_CLINICA_ID", "sede-demo"):
+            with self.assertRaises(HTTPException) as raised:
+                main.crear_turno(self.turno_nuevo(), user={"user_id": "admin-demo"})
+
+        self.assertEqual(raised.exception.status_code, 409)
+        self.assertIn("se superpone", raised.exception.detail)
+        self.assertTrue(connection.rolled_back)
 
 
 if __name__ == "__main__":

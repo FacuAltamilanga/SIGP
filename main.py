@@ -367,6 +367,9 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
         }]}
     except HTTPException:
         conn.rollback(); raise
+    except psycopg.errors.ExclusionViolation:
+        conn.rollback()
+        raise HTTPException(status_code=409, detail="El horario seleccionado se superpone con otro turno del médico. Elegí otro horario.")
     except psycopg.Error as err:
         conn.rollback(); raise HTTPException(status_code=500, detail=f"Error en la base de datos: {err}")
     finally:
