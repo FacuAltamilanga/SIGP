@@ -160,6 +160,21 @@ class CrearTurnoTests(unittest.TestCase):
         self.assertIn("JOIN pacientes", statement)
         self.assertIn("t.estado IN", statement)
 
+    def test_registra_triaje_con_edad_calculada_por_el_servidor(self):
+        connection = FakeConnection([
+            {"id": "historia-demo", "sexo": "femenino", "edad_dias": 820},
+            {"id": "signo-demo"},
+        ])
+        payload = main.TriajeRequest(temperatura=37.2, frecuencia_cardiaca=110, saturacion_oxigeno=98, peso_kg=12.4, talla_cm=90, paciente_id="paciente-demo")
+        with patch.object(main, "get_db_connection", return_value=connection), patch.object(main, "SIGP_SEDE_CLINICA_ID", "sede-demo"):
+            response = main.guardar_triaje(payload, user={"user_id": "enfermeria-demo"})
+
+        self.assertTrue(connection.committed)
+        self.assertEqual(response["edad_dias"], 820)
+        statements = "\n".join(query for query, _params in connection.cursor_instance.executions)
+        self.assertIn("CURRENT_DATE - p.fecha_nacimiento", statements)
+        self.assertIn("INSERT INTO signos_vitales", statements)
+
 
 if __name__ == "__main__":
     unittest.main()

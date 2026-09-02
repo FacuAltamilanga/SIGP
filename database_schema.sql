@@ -1105,6 +1105,14 @@ CREATE TRIGGER tr_auditar_registro_consulta
 AFTER INSERT OR UPDATE ON registros_consulta
 FOR EACH ROW EXECUTE FUNCTION auditar_escritura_hcd();
 
+CREATE TRIGGER tr_auditar_signos_vitales
+AFTER INSERT OR UPDATE ON signos_vitales
+FOR EACH ROW EXECUTE FUNCTION auditar_escritura_hcd();
+
+CREATE TRIGGER tr_auditar_alertas_medicas
+AFTER INSERT OR UPDATE ON alertas_medicas
+FOR EACH ROW EXECUTE FUNCTION auditar_escritura_hcd();
+
 -- Los SELECT no disparan triggers en PostgreSQL. La API debe invocar esta funcion
 -- dentro de la misma transaccion antes de devolver una HCD al cliente.
 CREATE FUNCTION registrar_acceso_hcd(

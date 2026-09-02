@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated, Optional
 from datetime import datetime, timedelta
 import base64
 import hashlib
@@ -268,12 +268,13 @@ class LoginRequest(BaseModel):
     password: str
 
 class TriajeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     paciente_id: str
-    temperatura: float
-    frecuencia_cardiaca: float
-    saturacion_oxigeno: float
-    peso_kg: float
-    talla_cm: float
+    temperatura: Annotated[float, Field(ge=25, le=45)]
+    frecuencia_cardiaca: Annotated[int, Field(ge=20, le=300)]
+    saturacion_oxigeno: Annotated[float, Field(ge=0, le=100)]
+    peso_kg: Annotated[float, Field(gt=0, le=300)]
+    talla_cm: Annotated[float, Field(gt=0, le=250)]
 
 class PrescriptionRequest(BaseModel):
     nombre: str
@@ -443,13 +444,74 @@ def finalizar_turno(turno_id: str, user=Depends(current_user)):
 
 @app.post("/api/triaje")
 def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
-    if min(triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm) < 0:
-        raise HTTPException(status_code=422, detail="Los signos vitales no pueden ser negativos.")
-    conn = get_db_connection(); cursor = conn.cursor()
+    if not SIGP_SEDE_CLINICA_ID or not user.get("user_id"):
+        raise HTTPException(status_code=500, detail="Faltan configurar los UUID de sede o usuario.")
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        cursor.execute("SELECT id FROM historias_clinicas WHERE paciente_id = %s AND sede_clinica_id = %s AND estado = 'activa'", (triaje.paciente_id, SIGP_SEDE_CLINICA_ID)); history = cursor.fetchone()
+        # La edad se calcula en la base, evitando que el cliente pueda alterarla.
+        cursor.execute("""SELECT h.id, p.sexo, (CURRENT_DATE - p.fecha_nacimiento) AS edad_dias
+                          FROM historias_clinicas h JOIN pacientes p ON p.id = h.paciente_id
+                          WHERE h.paciente_id = %s AND h.sede_clinica_id = %s AND h.estado = 'activa'""", (triaje.paciente_id, SIGP_SEDE_CLINICA_ID))
+        history = cursor.fetchone()
         if not history: raise HTTPException(status_code=404, detail="El paciente no tiene historia clínica activa.")
-        cursor.execute("INSERT INTO signos_vitales (historia_clinica_id, registrado_por, edad_dias, temperatura_c, frecuencia_cardiaca_lpm, saturacion_oxigeno_pct, peso_kg, talla_cm) VALUES (%s,%s,0,%s,%s,%s,%s,%s)", (history['id'], user.get('user_id'), triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm)); conn.commit(); return {"mensaje": "Triaje guardado correctamente"}
+        cursor.execute("SELECT set_config('app.usuario_id', %s, true)", (user["user_id"],))
+        cursor.execute("SELECT set_config('app.motivo_auditoria', 'Registro de signos vitales en triaje', true)")
+        cursor.execute("""INSERT INTO signos_vitales
+                          (historia_clinica_id, registrado_por, edad_dias, temperatura_c, frecuencia_cardiaca_lpm, saturacion_oxigeno_pct, peso_kg, talla_cm)
+                          VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""", (history['id'], user['user_id'], history['edad_dias'], triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm))
+        signo_vital_id = cursor.fetchone()['id']
+
+        metricas = {"temperatura_c": triaje.temperatura, "frecuencia_cardiaca_lpm": triaje.frecuencia_cardiaca, "saturacion_oxigeno_pct": triaje.saturacion_oxigeno}
+        cursor.execute("""SELECT DISTINCT ON (codigo_metrica) codigo_metrica, advertencia_min, advertencia_max, critico_min, critico_max, unidad
+                          FROM umbrales_clinicos
+                          WHERE activo AND codigo_metrica = ANY(%s)
+                            AND %s BETWEEN edad_min_dias AND edad_max_dias
+                            AND (sexo IS NULL OR sexo = %s)
+                          ORDER BY codigo_metrica, (sexo IS NOT NULL) DESC""", (list(metricas), history['edad_dias'], history['sexo']))
+        umbrales = {row['codigo_metrica']: row for row in cursor.fetchall()}
+        alertas = []
+        for codigo, valor in metricas.items():
+            umbral = umbrales.get(codigo)
+            if not umbral:
+                continue
+            prioridad, referencia = evaluar_umbral(float(valor), umbral)
+            if not prioridad:
+                continue
+            cursor.execute("""INSERT INTO alertas_medicas
+                              (historia_clinica_id, origen, prioridad, codigo, titulo, descripcion, metrica_codigo, valor_observado, umbral_referencia, signo_vital_id)
+                              VALUES (%s, 'signo_vital', %s, %s, %s, %s, %s, %s, %s, %s)
+                              RETURNING id, prioridad, titulo, descripcion, metrica_codigo, valor_observado""", (history['id'], prioridad, f"{codigo}_{prioridad}", f"{codigo.replace('_', ' ').capitalize()} fuera de rango", f"Valor observado: {valor} {umbral['unidad']}. Rango de referencia: {referencia}.", codigo, valor, referencia, signo_vital_id))
+            alertas.append(cursor.fetchone())
+        conn.commit()
+        prioridad = 'critica' if any(alerta['prioridad'] == 'critica' for alerta in alertas) else ('advertencia' if alertas else None)
+        return {"mensaje": "Triaje guardado correctamente.", "signo_vital_id": signo_vital_id, "edad_dias": history['edad_dias'], "prioridad": prioridad, "alertas": alertas}
+    except HTTPException:
+        conn.rollback(); raise
+    except psycopg.Error:
+        conn.rollback(); raise HTTPException(status_code=500, detail="No se pudo guardar el triaje.")
+    finally:
+        cursor.close(); conn.close()
+
+def evaluar_umbral(valor: float, umbral: dict) -> tuple[Optional[str], Optional[str]]:
+    for prioridad, minimo, maximo in (("critica", umbral['critico_min'], umbral['critico_max']), ("advertencia", umbral['advertencia_min'], umbral['advertencia_max'])):
+        if minimo is not None and valor < float(minimo):
+            return prioridad, f"≥ {minimo} {umbral['unidad']}"
+        if maximo is not None and valor > float(maximo):
+            return prioridad, f"≤ {maximo} {umbral['unidad']}"
+    return None, None
+
+@app.get("/api/alertas")
+def listar_alertas(limite: int = 20, user=Depends(current_user)):
+    limite = min(max(limite, 1), 100)
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
+    try:
+        cursor.execute("""SELECT a.id, a.prioridad, a.titulo, a.descripcion, a.metrica_codigo, a.valor_observado, a.generada_en,
+                                 CONCAT_WS(' ', p.nombres, p.apellidos) AS paciente, p.numero_documento AS dni
+                          FROM alertas_medicas a JOIN historias_clinicas h ON h.id = a.historia_clinica_id
+                          JOIN pacientes p ON p.id = h.paciente_id
+                          WHERE a.estado = 'activa' AND h.sede_clinica_id = %s
+                          ORDER BY a.prioridad DESC, a.generada_en DESC LIMIT %s""", (SIGP_SEDE_CLINICA_ID, limite))
+        return {"alertas": cursor.fetchall()}
     finally:
         cursor.close(); conn.close()
 
