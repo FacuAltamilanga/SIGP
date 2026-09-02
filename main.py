@@ -106,6 +106,9 @@ class NuevoTurno(BaseModel):
     hora: str
     dni: str
     nombre_paciente: Optional[str] = None
+    apellido_paciente: Optional[str] = None
+    fecha_nacimiento: Optional[str] = None
+    sexo: Optional[str] = None
     consultorio_id: Optional[str] = None
     motivo: str = 'Consulta pediátrica'
 
@@ -316,11 +319,36 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
         cursor.execute("SELECT id FROM pacientes WHERE numero_documento = %s AND sede_clinica_id = %s", (turno.dni, SIGP_SEDE_CLINICA_ID))
         paciente = cursor.fetchone()
         if not paciente:
-            raise HTTPException(status_code=404, detail="No existe un paciente con ese DNI en la sede.")
+            nombre = (turno.nombre_paciente or '').strip()
+            apellido = (turno.apellido_paciente or '').strip()
+            if not nombre or not apellido or not turno.fecha_nacimiento or not turno.sexo:
+                raise HTTPException(status_code=422, detail="Para un paciente nuevo se requieren nombres, apellidos, fecha de nacimiento y sexo.")
+            if turno.sexo not in {'femenino', 'masculino', 'intersexual', 'no_informado'}:
+                raise HTTPException(status_code=422, detail="El sexo informado no es válido.")
+            try:
+                fecha_nacimiento = datetime.strptime(turno.fecha_nacimiento, '%Y-%m-%d').date()
+            except ValueError:
+                raise HTTPException(status_code=422, detail="La fecha de nacimiento debe tener formato AAAA-MM-DD.")
+            if fecha_nacimiento > datetime.now().date():
+                raise HTTPException(status_code=422, detail="La fecha de nacimiento no puede estar en el futuro.")
+            cursor.execute(
+                """INSERT INTO pacientes (sede_clinica_id, numero_documento, nombres, apellidos, fecha_nacimiento, sexo)
+                   VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
+                (SIGP_SEDE_CLINICA_ID, turno.dni, nombre, apellido, fecha_nacimiento, turno.sexo),
+            )
+            paciente = cursor.fetchone()
         cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, fecha_hora_inicio, fecha_hora_fin)
                         VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id, fecha_hora_inicio AS hora, paciente_id, estado""", (SIGP_SEDE_CLINICA_ID, paciente['id'], medico_id, user['user_id'], turno.motivo, inicio, fin))
         creado = cursor.fetchone(); conn.commit()
-        return creado
+        return {"turnos": [{
+            "id": creado["id"],
+            "hora": inicio.strftime('%H:%M'),
+            "nombre_paciente": turno.nombre_paciente,
+            "dni": turno.dni,
+            "cobertura": "pending",
+            "consultorio_id": turno.consultorio_id or "general",
+            "consultorio": "Agenda general",
+        }]}
     except HTTPException:
         conn.rollback(); raise
     except psycopg.Error as err:
