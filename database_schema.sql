@@ -1058,10 +1058,10 @@ DECLARE
     v_motivo TEXT;
     v_accion VARCHAR(30);
 BEGIN
-    v_historia_id := CASE
-        WHEN TG_TABLE_NAME = 'historias_clinicas' THEN NEW.id
-        ELSE NEW.historia_clinica_id
-    END;
+    v_historia_id := COALESCE(
+        NULLIF(to_jsonb(NEW)->>'historia_clinica_id', '')::uuid,
+        NULLIF(to_jsonb(NEW)->>'id', '')::uuid
+    );
 
     BEGIN
         v_usuario_id := NULLIF(current_setting('app.usuario_id', true), '')::uuid;
