@@ -101,14 +101,22 @@ class NuevaConsulta(BaseModel):
     id_medico: str # Tu compañero debe enviarte el UUID de un médico de prueba
     datos_paciente: Optional[DatosPacienteNuevo] = None
 
+class PacienteTurno(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    dni: Optional[str] = None
+    fecha_nacimiento: Optional[str] = None
+    sexo: Optional[str] = None
+
 class NuevoTurno(BaseModel):
     fecha: str
     hora: str
-    dni: str
+    dni: Optional[str] = None
     nombre_paciente: Optional[str] = None
     apellido_paciente: Optional[str] = None
     fecha_nacimiento: Optional[str] = None
     sexo: Optional[str] = None
+    paciente: Optional[PacienteTurno] = None
     consultorio_id: Optional[str] = None
     motivo: str = 'Consulta pediátrica'
 
@@ -312,21 +320,27 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
         inicio = datetime.fromisoformat(f"{turno.fecha}T{turno.hora}")
     except ValueError:
         raise HTTPException(status_code=422, detail="Fecha u hora inválida.")
+    paciente_enviado = turno.paciente
+    dni = (turno.dni or (paciente_enviado.dni if paciente_enviado else None) or '').strip()
+    if not dni:
+        raise HTTPException(status_code=422, detail="El DNI del paciente es obligatorio.")
     fin = inicio + timedelta(minutes=30)
     medico_id = SIGP_USER_IDS.get('medico') or user['user_id']
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        cursor.execute("SELECT id FROM pacientes WHERE numero_documento = %s AND sede_clinica_id = %s", (turno.dni, SIGP_SEDE_CLINICA_ID))
+        cursor.execute("SELECT id FROM pacientes WHERE numero_documento = %s AND sede_clinica_id = %s", (dni, SIGP_SEDE_CLINICA_ID))
         paciente = cursor.fetchone()
         if not paciente:
-            nombre = (turno.nombre_paciente or '').strip()
-            apellido = (turno.apellido_paciente or '').strip()
-            if not nombre or not apellido or not turno.fecha_nacimiento or not turno.sexo:
+            nombre = (turno.nombre_paciente or (paciente_enviado.nombre if paciente_enviado else None) or '').strip()
+            apellido = (turno.apellido_paciente or (paciente_enviado.apellido if paciente_enviado else None) or '').strip()
+            fecha_nacimiento_texto = turno.fecha_nacimiento or (paciente_enviado.fecha_nacimiento if paciente_enviado else None)
+            sexo = turno.sexo or (paciente_enviado.sexo if paciente_enviado else None)
+            if not nombre or not apellido or not fecha_nacimiento_texto or not sexo:
                 raise HTTPException(status_code=422, detail="Para un paciente nuevo se requieren nombres, apellidos, fecha de nacimiento y sexo.")
-            if turno.sexo not in {'femenino', 'masculino', 'intersexual', 'no_informado'}:
+            if sexo not in {'femenino', 'masculino', 'intersexual', 'no_informado'}:
                 raise HTTPException(status_code=422, detail="El sexo informado no es válido.")
             try:
-                fecha_nacimiento = datetime.strptime(turno.fecha_nacimiento, '%Y-%m-%d').date()
+                fecha_nacimiento = datetime.strptime(fecha_nacimiento_texto, '%Y-%m-%d').date()
             except ValueError:
                 raise HTTPException(status_code=422, detail="La fecha de nacimiento debe tener formato AAAA-MM-DD.")
             if fecha_nacimiento > datetime.now().date():
@@ -334,7 +348,7 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
             cursor.execute(
                 """INSERT INTO pacientes (sede_clinica_id, numero_documento, nombres, apellidos, fecha_nacimiento, sexo)
                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id""",
-                (SIGP_SEDE_CLINICA_ID, turno.dni, nombre, apellido, fecha_nacimiento, turno.sexo),
+                (SIGP_SEDE_CLINICA_ID, dni, nombre, apellido, fecha_nacimiento, sexo),
             )
             paciente = cursor.fetchone()
         cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, fecha_hora_inicio, fecha_hora_fin)
@@ -344,7 +358,7 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
             "id": creado["id"],
             "hora": inicio.strftime('%H:%M'),
             "nombre_paciente": turno.nombre_paciente,
-            "dni": turno.dni,
+            "dni": dni,
             "cobertura": "pending",
             "consultorio_id": turno.consultorio_id or "general",
             "consultorio": "Agenda general",

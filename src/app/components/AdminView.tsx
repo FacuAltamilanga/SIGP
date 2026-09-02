@@ -124,7 +124,7 @@ export function AdminView() {
     event.preventDefault(); setBookingError(null); setIsBooking(true);
     try {
       const headers = new Headers(getAuthHeaders()); headers.set('Content-Type', 'application/json');
-      const response = await fetch(`${getApiUrl()}/turnos`, { method: 'POST', headers, body: JSON.stringify({ fecha: booking.fecha, hora: booking.hora, dni: booking.dni, nombre_paciente: booking.nombre, apellido_paciente: booking.apellido, fecha_nacimiento: booking.fecha_nacimiento, sexo: booking.sexo, motivo: booking.motivo }) });
+      const response = await fetch(`${getApiUrl()}/turnos`, { method: 'POST', headers, body: JSON.stringify({ fecha: booking.fecha, hora: booking.hora, dni: booking.dni, nombre_paciente: booking.nombre, apellido_paciente: booking.apellido, fecha_nacimiento: booking.fecha_nacimiento, sexo: booking.sexo, paciente: { nombre: booking.nombre, apellido: booking.apellido, dni: booking.dni, fecha_nacimiento: booking.fecha_nacimiento, sexo: booking.sexo }, motivo: booking.motivo }) });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.detail ?? 'No se pudo agendar el turno.');
       const created = appointmentsFrom(payload)[0];

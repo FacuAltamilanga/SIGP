@@ -81,6 +81,25 @@ class CrearTurnoTests(unittest.TestCase):
         self.assertEqual(raised.exception.status_code, 422)
         self.assertTrue(connection.rolled_back)
 
+    def test_acepta_datos_de_paciente_anidados(self):
+        connection = FakeConnection([None, {"id": PACIENTE_ID}, {"id": TURNO_ID}])
+        turno = main.NuevoTurno(
+            fecha="2026-09-10",
+            hora="11:00",
+            paciente={
+                "nombre": "Ana",
+                "apellido": "Gómez",
+                "dni": "50123457",
+                "fecha_nacimiento": "2020-05-20",
+                "sexo": "femenino",
+            },
+        )
+        with patch.object(main, "get_db_connection", return_value=connection), patch.object(main, "SIGP_SEDE_CLINICA_ID", "sede-demo"):
+            response = main.crear_turno(turno, user={"user_id": "admin-demo"})
+
+        self.assertTrue(connection.committed)
+        self.assertEqual(response["turnos"][0]["dni"], "50123457")
+
 
 if __name__ == "__main__":
     unittest.main()
