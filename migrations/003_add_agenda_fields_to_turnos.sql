@@ -1,0 +1,3 @@
+ALTER TABLE turnos
+ADD COLUMN IF NOT EXISTS consultorio_nombre VARCHAR(100),
+ADD COLUMN IF NOT EXISTS cobertura_medica VARCHAR(150);

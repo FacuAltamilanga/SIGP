@@ -118,6 +118,8 @@ class NuevoTurno(BaseModel):
     sexo: Optional[str] = None
     paciente: Optional[PacienteTurno] = None
     tutor: Optional[str] = None
+    consultorio: Optional[str] = None
+    cobertura_medica: Optional[str] = None
     consultorio_id: Optional[str] = None
     motivo: str = 'Consulta pediátrica'
 
@@ -305,9 +307,9 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
 def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, NULL AS nombre_paciente, NULL AS dni, tutor_nombre AS tutor, NULL AS obra_social, NULL AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
+        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, NULL AS nombre_paciente, NULL AS dni, tutor_nombre AS tutor, cobertura_medica AS obra_social, COALESCE(consultorio_nombre, 'Agenda general') AS consultorio, COALESCE(consultorio_nombre, 'general') AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
         params = [fecha]
-        if consultorio_id != "all": query += " AND consultorio_id = %s"; params.append(consultorio_id)
+        if consultorio_id != "all": query += " AND consultorio_nombre = %s"; params.append(consultorio_id)
         query += " ORDER BY fecha_hora"
         cursor.execute(query, tuple(params)); return {"turnos": cursor.fetchall()}
     finally:
@@ -325,6 +327,8 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
     dni = (turno.dni or (paciente_enviado.dni if paciente_enviado else None) or '').strip()
     if not dni:
         raise HTTPException(status_code=422, detail="El DNI del paciente es obligatorio.")
+    consultorio = (turno.consultorio or turno.consultorio_id or 'Consultorio 1').strip()
+    cobertura_medica = (turno.cobertura_medica or 'Sin cobertura').strip()
     fin = inicio + timedelta(minutes=30)
     medico_id = SIGP_USER_IDS.get('medico') or user['user_id']
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
@@ -352,8 +356,8 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
                 (SIGP_SEDE_CLINICA_ID, dni, nombre, apellido, fecha_nacimiento, sexo),
             )
             paciente = cursor.fetchone()
-        cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, tutor_nombre, fecha_hora_inicio, fecha_hora_fin)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id, fecha_hora_inicio AS hora, paciente_id, estado""", (SIGP_SEDE_CLINICA_ID, paciente['id'], medico_id, user['user_id'], turno.motivo, (turno.tutor or '').strip() or None, inicio, fin))
+        cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, tutor_nombre, consultorio_nombre, cobertura_medica, fecha_hora_inicio, fecha_hora_fin)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id, fecha_hora_inicio AS hora, paciente_id, estado""", (SIGP_SEDE_CLINICA_ID, paciente['id'], medico_id, user['user_id'], turno.motivo, (turno.tutor or '').strip() or None, consultorio, cobertura_medica, inicio, fin))
         creado = cursor.fetchone(); conn.commit()
         return {"turnos": [{
             "id": creado["id"],
@@ -361,9 +365,10 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
             "nombre_paciente": turno.nombre_paciente,
             "dni": dni,
             "tutor": (turno.tutor or '').strip() or None,
+            "obra_social": cobertura_medica,
             "cobertura": "pending",
-            "consultorio_id": turno.consultorio_id or "general",
-            "consultorio": "Agenda general",
+            "consultorio_id": consultorio,
+            "consultorio": consultorio,
         }]}
     except HTTPException:
         conn.rollback(); raise
