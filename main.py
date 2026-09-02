@@ -449,13 +449,20 @@ def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
         # La edad se calcula en la base, evitando que el cliente pueda alterarla.
+        # Para urgencias se admite al paciente aun cuando todavía no tenga HCD.
         cursor.execute("""SELECT h.id, p.sexo, (CURRENT_DATE - p.fecha_nacimiento) AS edad_dias
-                          FROM historias_clinicas h JOIN pacientes p ON p.id = h.paciente_id
-                          WHERE h.paciente_id = %s AND h.sede_clinica_id = %s AND h.estado = 'activa'""", (triaje.paciente_id, SIGP_SEDE_CLINICA_ID))
+                          FROM pacientes p LEFT JOIN historias_clinicas h
+                            ON h.paciente_id = p.id AND h.sede_clinica_id = p.sede_clinica_id AND h.estado = 'activa'
+                          WHERE p.id = %s AND p.sede_clinica_id = %s""", (triaje.paciente_id, SIGP_SEDE_CLINICA_ID))
         history = cursor.fetchone()
-        if not history: raise HTTPException(status_code=404, detail="El paciente no tiene historia clínica activa.")
+        if not history: raise HTTPException(status_code=404, detail="Paciente no encontrado en la sede clínica.")
         cursor.execute("SELECT set_config('app.usuario_id', %s, true)", (user["user_id"],))
         cursor.execute("SELECT set_config('app.motivo_auditoria', 'Registro de signos vitales en triaje', true)")
+        historia_creada_en_urgencia = history['id'] is None
+        if historia_creada_en_urgencia:
+            cursor.execute("""INSERT INTO historias_clinicas (paciente_id, sede_clinica_id, numero_historia, creada_por)
+                              VALUES (%s, %s, %s, %s) RETURNING id""", (triaje.paciente_id, SIGP_SEDE_CLINICA_ID, f"URG-{triaje.paciente_id}", user['user_id']))
+            history['id'] = cursor.fetchone()['id']
         cursor.execute("""INSERT INTO signos_vitales
                           (historia_clinica_id, registrado_por, edad_dias, temperatura_c, frecuencia_cardiaca_lpm, saturacion_oxigeno_pct, peso_kg, talla_cm)
                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id""", (history['id'], user['user_id'], history['edad_dias'], triaje.temperatura, triaje.frecuencia_cardiaca, triaje.saturacion_oxigeno, triaje.peso_kg, triaje.talla_cm))
@@ -484,7 +491,7 @@ def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
             alertas.append(cursor.fetchone())
         conn.commit()
         prioridad = 'critica' if any(alerta['prioridad'] == 'critica' for alerta in alertas) else ('advertencia' if alertas else None)
-        return {"mensaje": "Triaje guardado correctamente.", "signo_vital_id": signo_vital_id, "edad_dias": history['edad_dias'], "prioridad": prioridad, "alertas": alertas}
+        return {"mensaje": "Triaje guardado correctamente.", "signo_vital_id": signo_vital_id, "edad_dias": history['edad_dias'], "historia_creada_en_urgencia": historia_creada_en_urgencia, "prioridad": prioridad, "alertas": alertas}
     except HTTPException:
         conn.rollback(); raise
     except psycopg.Error:

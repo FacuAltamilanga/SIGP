@@ -175,6 +175,20 @@ class CrearTurnoTests(unittest.TestCase):
         self.assertIn("CURRENT_DATE - p.fecha_nacimiento", statements)
         self.assertIn("INSERT INTO signos_vitales", statements)
 
+    def test_crea_historia_de_urgencias_si_no_existe(self):
+        connection = FakeConnection([
+            {"id": None, "sexo": "masculino", "edad_dias": 15},
+            {"id": "historia-urgencias"},
+            {"id": "signo-demo"},
+        ])
+        payload = main.TriajeRequest(temperatura=37.0, frecuencia_cardiaca=120, saturacion_oxigeno=98, peso_kg=3.8, talla_cm=52, paciente_id="paciente-demo")
+        with patch.object(main, "get_db_connection", return_value=connection), patch.object(main, "SIGP_SEDE_CLINICA_ID", "sede-demo"):
+            response = main.guardar_triaje(payload, user={"user_id": "enfermeria-demo"})
+
+        self.assertTrue(response["historia_creada_en_urgencia"])
+        statements = "\n".join(query for query, _params in connection.cursor_instance.executions)
+        self.assertIn("INSERT INTO historias_clinicas", statements)
+
 
 if __name__ == "__main__":
     unittest.main()
