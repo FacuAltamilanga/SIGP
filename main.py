@@ -123,6 +123,9 @@ class NuevoTurno(BaseModel):
     consultorio_id: Optional[str] = None
     motivo: str = 'Consulta pediátrica'
 
+class CancelarTurnoRequest(BaseModel):
+    motivo: str = 'Cancelado desde la agenda'
+
 # --- ENDPOINT 1: REGISTRAR CONSULTA (Y PACIENTE SI ES NUEVO) ---
 
 @app.post("/api/consultas")
@@ -307,7 +310,7 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
 def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, NULL AS nombre_paciente, NULL AS dni, tutor_nombre AS tutor, cobertura_medica AS obra_social, COALESCE(consultorio_nombre, 'Agenda general') AS consultorio, COALESCE(consultorio_nombre, 'general') AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
+        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, estado, NULL AS nombre_paciente, NULL AS dni, tutor_nombre AS tutor, cobertura_medica AS obra_social, COALESCE(consultorio_nombre, 'Agenda general') AS consultorio, COALESCE(consultorio_nombre, 'general') AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
         params = [fecha]
         if consultorio_id != "all": query += " AND consultorio_nombre = %s"; params.append(consultorio_id)
         query += " ORDER BY fecha_hora"
@@ -367,6 +370,7 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
             "tutor": (turno.tutor or '').strip() or None,
             "obra_social": cobertura_medica,
             "cobertura": "pending",
+            "estado": creado.get("estado", "solicitado"),
             "consultorio_id": consultorio,
             "consultorio": consultorio,
         }]}
@@ -377,6 +381,55 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
         raise HTTPException(status_code=409, detail="El horario seleccionado se superpone con otro turno del médico. Elegí otro horario.")
     except psycopg.Error as err:
         conn.rollback(); raise HTTPException(status_code=500, detail=f"Error en la base de datos: {err}")
+    finally:
+        cursor.close(); conn.close()
+
+@app.patch("/api/turnos/{turno_id}/cancelar")
+def cancelar_turno(turno_id: str, solicitud: CancelarTurnoRequest, user=Depends(current_user)):
+    if not SIGP_SEDE_CLINICA_ID or not user.get('user_id'):
+        raise HTTPException(status_code=500, detail="Faltan configurar los UUID de sede o usuario.")
+    motivo = solicitud.motivo.strip()
+    if not motivo:
+        raise HTTPException(status_code=422, detail="Indicá el motivo de la cancelación.")
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
+    try:
+        cursor.execute("""UPDATE turnos
+                          SET estado = 'cancelado', cancelado_en = now(), cancelado_por = %s,
+                              motivo_cancelacion = %s, actualizado_en = now()
+                          WHERE id = %s AND sede_clinica_id = %s
+                            AND estado IN ('solicitado', 'confirmado', 'arribado', 'en_atencion')
+                          RETURNING id, estado""", (user['user_id'], motivo, turno_id, SIGP_SEDE_CLINICA_ID))
+        actualizado = cursor.fetchone()
+        if not actualizado:
+            raise HTTPException(status_code=409, detail="El turno no está disponible para cancelar.")
+        conn.commit()
+        return actualizado
+    except HTTPException:
+        conn.rollback(); raise
+    except psycopg.Error:
+        conn.rollback(); raise HTTPException(status_code=500, detail="No se pudo cancelar el turno.")
+    finally:
+        cursor.close(); conn.close()
+
+@app.patch("/api/turnos/{turno_id}/finalizar")
+def finalizar_turno(turno_id: str, user=Depends(current_user)):
+    if not SIGP_SEDE_CLINICA_ID or not user.get('user_id'):
+        raise HTTPException(status_code=500, detail="Faltan configurar los UUID de sede o usuario.")
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
+    try:
+        cursor.execute("""UPDATE turnos SET estado = 'completado', actualizado_en = now()
+                          WHERE id = %s AND sede_clinica_id = %s
+                            AND estado IN ('solicitado', 'confirmado', 'arribado', 'en_atencion')
+                          RETURNING id, estado""", (turno_id, SIGP_SEDE_CLINICA_ID))
+        actualizado = cursor.fetchone()
+        if not actualizado:
+            raise HTTPException(status_code=409, detail="El turno no está disponible para finalizar.")
+        conn.commit()
+        return actualizado
+    except HTTPException:
+        conn.rollback(); raise
+    except psycopg.Error:
+        conn.rollback(); raise HTTPException(status_code=500, detail="No se pudo finalizar el turno.")
     finally:
         cursor.close(); conn.close()
 

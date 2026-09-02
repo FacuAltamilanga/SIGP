@@ -127,6 +127,26 @@ class CrearTurnoTests(unittest.TestCase):
         self.assertIn("se superpone", raised.exception.detail)
         self.assertTrue(connection.rolled_back)
 
+    def test_cancela_un_turno_activo(self):
+        connection = FakeConnection([{"id": TURNO_ID, "estado": "cancelado"}])
+        with patch.object(main, "get_db_connection", return_value=connection), patch.object(main, "SIGP_SEDE_CLINICA_ID", "sede-demo"):
+            response = main.cancelar_turno(str(TURNO_ID), main.CancelarTurnoRequest(motivo="El paciente no asistirá"), user={"user_id": "admin-demo"})
+
+        self.assertTrue(connection.committed)
+        self.assertEqual(response["estado"], "cancelado")
+        statement, params = connection.cursor_instance.executions[0]
+        self.assertIn("estado = 'cancelado'", statement)
+        self.assertIn("El paciente no asistirá", params)
+
+    def test_finaliza_un_turno_activo(self):
+        connection = FakeConnection([{"id": TURNO_ID, "estado": "completado"}])
+        with patch.object(main, "get_db_connection", return_value=connection), patch.object(main, "SIGP_SEDE_CLINICA_ID", "sede-demo"):
+            response = main.finalizar_turno(str(TURNO_ID), user={"user_id": "admin-demo"})
+
+        self.assertTrue(connection.committed)
+        self.assertEqual(response["estado"], "completado")
+        self.assertIn("estado = 'completado'", connection.cursor_instance.executions[0][0])
+
 
 if __name__ == "__main__":
     unittest.main()
