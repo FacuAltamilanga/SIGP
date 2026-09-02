@@ -101,6 +101,14 @@ class NuevaConsulta(BaseModel):
     id_medico: str # Tu compañero debe enviarte el UUID de un médico de prueba
     datos_paciente: Optional[DatosPacienteNuevo] = None
 
+class NuevoTurno(BaseModel):
+    fecha: str
+    hora: str
+    dni: str
+    nombre_paciente: Optional[str] = None
+    consultorio_id: Optional[str] = None
+    motivo: str = 'Consulta pediátrica'
+
 # --- ENDPOINT 1: REGISTRAR CONSULTA (Y PACIENTE SI ES NUEVO) ---
 
 @app.post("/api/consultas")
@@ -290,6 +298,33 @@ def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_
         if consultorio_id != "all": query += " AND consultorio_id = %s"; params.append(consultorio_id)
         query += " ORDER BY fecha_hora"
         cursor.execute(query, tuple(params)); return {"turnos": cursor.fetchall()}
+    finally:
+        cursor.close(); conn.close()
+
+@app.post("/api/turnos")
+def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
+    if not SIGP_SEDE_CLINICA_ID or not user.get('user_id'):
+        raise HTTPException(status_code=500, detail="Faltan configurar los UUID de sede o usuario.")
+    try:
+        inicio = datetime.fromisoformat(f"{turno.fecha}T{turno.hora}")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Fecha u hora inválida.")
+    fin = inicio + timedelta(minutes=30)
+    medico_id = SIGP_USER_IDS.get('medico') or user['user_id']
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
+    try:
+        cursor.execute("SELECT id FROM pacientes WHERE numero_documento = %s AND sede_clinica_id = %s", (turno.dni, SIGP_SEDE_CLINICA_ID))
+        paciente = cursor.fetchone()
+        if not paciente:
+            raise HTTPException(status_code=404, detail="No existe un paciente con ese DNI en la sede.")
+        cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, fecha_hora_inicio, fecha_hora_fin)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id, fecha_hora_inicio AS hora, paciente_id, estado""", (SIGP_SEDE_CLINICA_ID, paciente['id'], medico_id, user['user_id'], turno.motivo, inicio, fin))
+        creado = cursor.fetchone(); conn.commit()
+        return creado
+    except HTTPException:
+        conn.rollback(); raise
+    except psycopg.Error as err:
+        conn.rollback(); raise HTTPException(status_code=500, detail=f"Error en la base de datos: {err}")
     finally:
         cursor.close(); conn.close()
 
