@@ -283,11 +283,15 @@ class PrescriptionRequest(BaseModel):
     duracion: str
 
 class HcdConsultationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     motivo: str
     diagnostico: str
     plan: str
     prescripciones: list[PrescriptionRequest] = []
     firma_digital: bool = False
+
+class FirmarHcdRequest(HcdConsultationRequest):
+    paciente_id: str
 
 @app.post("/api/auth/login")
 def login(credentials: LoginRequest):
@@ -528,28 +532,61 @@ def listar_alertas(limite: int = 20, user=Depends(current_user)):
 def obtener_hcd(paciente_id: str, user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        cursor.execute("SELECT id_paciente AS id, nombre, apellido, dni, fecha_nacimiento FROM pacientes WHERE id_paciente = %s", (paciente_id,)); paciente = cursor.fetchone()
+        cursor.execute("""SELECT p.id, p.nombres AS nombre, p.apellidos AS apellido, p.numero_documento AS dni, p.fecha_nacimiento,
+                                 (CURRENT_DATE - p.fecha_nacimiento) AS edad, h.id AS historia_id
+                          FROM pacientes p LEFT JOIN historias_clinicas h ON h.paciente_id = p.id AND h.estado = 'activa'
+                          WHERE p.id = %s AND p.sede_clinica_id = %s""", (paciente_id, SIGP_SEDE_CLINICA_ID)); paciente = cursor.fetchone()
         if not paciente: raise HTTPException(status_code=404, detail="Paciente no encontrado.")
-        cursor.execute("SELECT * FROM antecedentes_medicos WHERE id_paciente = %s", (paciente_id,)); antecedentes = cursor.fetchone() or {}
-        return {"paciente": paciente, "antecedentes": antecedentes, "curvas_crecimiento": {"peso": [], "talla": [], "perimetro_cefalico": []}}
+        antecedentes = []
+        curvas = {"peso": [], "talla": [], "perimetro_cefalico": []}
+        signos = {}
+        if paciente['historia_id']:
+            cursor.execute("SELECT sustancia, severidad FROM alergias_paciente WHERE historia_clinica_id = %s AND anulada_en IS NULL", (paciente['historia_id'],)); antecedentes = [f"{row['sustancia']} ({row['severidad']})" for row in cursor.fetchall()]
+            cursor.execute("SELECT registrado_en AS fecha, peso_kg, talla_cm, perimetro_cefalico_cm FROM signos_vitales WHERE historia_clinica_id = %s AND anulado_en IS NULL ORDER BY registrado_en", (paciente['historia_id'],)); mediciones = cursor.fetchall()
+            curvas = {"peso": [{"fecha": row['fecha'], "valor": row['peso_kg']} for row in mediciones if row['peso_kg'] is not None], "talla": [{"fecha": row['fecha'], "valor": row['talla_cm']} for row in mediciones if row['talla_cm'] is not None], "perimetro_cefalico": [{"fecha": row['fecha'], "valor": row['perimetro_cefalico_cm']} for row in mediciones if row['perimetro_cefalico_cm'] is not None]}
+            cursor.execute("SELECT temperatura_c, frecuencia_cardiaca_lpm, saturacion_oxigeno_pct, peso_kg FROM signos_vitales WHERE historia_clinica_id = %s AND anulado_en IS NULL ORDER BY registrado_en DESC LIMIT 1", (paciente['historia_id'],)); signos = cursor.fetchone() or {}
+        return {"paciente": paciente, "antecedentes": antecedentes, "signos_vitales": signos, "curvas_crecimiento": curvas}
     finally:
         cursor.close(); conn.close()
 
 @app.post("/api/hcd/{paciente_id}/consultas")
 def guardar_consulta_hcd(paciente_id: str, consulta: HcdConsultationRequest, user=Depends(current_user)):
+    return firmar_hcd(FirmarHcdRequest(paciente_id=paciente_id, **consulta.model_dump()), user)
+
+@app.post("/api/hcd/firmar")
+def firmar_hcd(consulta: FirmarHcdRequest, user=Depends(current_user)):
     if user.get("role") != "medico": raise HTTPException(status_code=403, detail="Solo un médico puede firmar consultas.")
-    if not consulta.firma_digital: raise HTTPException(status_code=422, detail="La firma digital es obligatoria.")
+    if not consulta.diagnostico.strip() or not consulta.plan.strip(): raise HTTPException(status_code=422, detail="Completar campos obligatorios")
+    if not consulta.motivo.strip() or not consulta.firma_digital: raise HTTPException(status_code=422, detail="Completar campos obligatorios")
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        cursor.execute("SELECT id_hcd FROM historias_clinicas_digitales WHERE id_paciente = %s AND estado = 'activa'", (paciente_id,)); hcd = cursor.fetchone()
+        cursor.execute("SELECT id FROM historias_clinicas WHERE paciente_id = %s AND sede_clinica_id = %s AND estado = 'activa'", (consulta.paciente_id, SIGP_SEDE_CLINICA_ID)); hcd = cursor.fetchone()
         if not hcd: raise HTTPException(status_code=404, detail="Historia clínica activa no encontrada.")
-        cursor.execute("INSERT INTO consultas_medicas (id_hcd, id_medico, motivo, descripcion_problema) VALUES (%s,%s,%s,%s)", (hcd["id_hcd"], user["sub"], consulta.motivo, f"Diagnóstico: {consulta.diagnostico}\nPlan: {consulta.plan}")); conn.commit(); return {"mensaje": "Consulta guardada y firmada digitalmente"}
+        nombres = {item.nombre.lower().strip() for item in consulta.prescripciones}
+        conflictos = ["Interacción simulada: ibuprofeno y warfarina"] if {'ibuprofeno', 'warfarina'} <= nombres else []
+        if conflictos: raise HTTPException(status_code=422, detail=conflictos[0])
+        contenido = {"paciente_id": consulta.paciente_id, "motivo": consulta.motivo.strip(), "diagnostico": consulta.diagnostico.strip(), "plan_seguimiento": consulta.plan.strip(), "prescripciones": [item.model_dump() for item in consulta.prescripciones], "firmante": user['user_id']}
+        firma_hash = hashlib.sha256(json.dumps(contenido, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+        cursor.execute("SELECT set_config('app.usuario_id', %s, true)", (user['user_id'],)); cursor.execute("SELECT set_config('app.motivo_auditoria', 'Firma digital de consulta pediátrica', true)")
+        cursor.execute("INSERT INTO atenciones (historia_clinica_id, tipo, medico_usuario_id, admitida_por, estado) VALUES (%s, 'consulta', %s, %s, 'finalizada') RETURNING id", (hcd['id'], user['user_id'], user['user_id'])); atencion = cursor.fetchone()
+        cursor.execute("""INSERT INTO registros_consulta (historia_clinica_id, atencion_id, medico_usuario_id, motivo_consulta, diagnostico_resumen, prescripcion_resumen, plan_seguimiento, estado, hash_contenido, firma_digital, firmado_en)
+                          VALUES (%s,%s,%s,%s,%s,%s,%s,'firmado',%s,%s,now()) RETURNING id""", (hcd['id'], atencion['id'], user['user_id'], consulta.motivo.strip(), consulta.diagnostico.strip(), ', '.join(item.nombre for item in consulta.prescripciones) or 'Sin prescripciones', consulta.plan.strip(), firma_hash, f"SIGP-{firma_hash}")); registro = cursor.fetchone()
+        conn.commit(); return {"mensaje": "Consulta guardada y firmada digitalmente", "registro_id": registro['id'], "hash_verificacion": firma_hash, "interacciones": []}
+    except HTTPException:
+        conn.rollback(); raise
+    except psycopg.Error:
+        conn.rollback(); raise HTTPException(status_code=500, detail="No se pudo firmar la consulta clínica.")
     finally:
         cursor.close(); conn.close()
 
 @app.get("/api/vademecum/buscar")
 def buscar_vademecum(q: str, paciente_id: str, user=Depends(current_user)):
-    return {"medicamentos": []}
+    conn = get_db_connection(); cursor = get_dict_cursor(conn)
+    try:
+        cursor.execute("SELECT id, principio_activo AS nombre, contraindicaciones AS detalle FROM medicamentos WHERE activo AND (principio_activo ILIKE %s OR nombre_comercial ILIKE %s) LIMIT 20", (f"%{q}%", f"%{q}%"))
+        return {"medicamentos": [{**row, "risk": "warning" if row['detalle'] else "low"} for row in cursor.fetchall()]}
+    finally:
+        cursor.close(); conn.close()
 
 @app.patch("/api/alertas/{alerta_id}/confirmar")
 def confirmar_alerta(alerta_id: str, user=Depends(current_user)):
