@@ -55,6 +55,7 @@ class CrearTurnoTests(unittest.TestCase):
             "apellido_paciente": "Pérez",
             "fecha_nacimiento": "2020-05-20",
             "sexo": "masculino",
+            "tutor": "María Pérez",
             "motivo": "Control pediátrico",
         }
         data.update(changes)
@@ -68,9 +69,11 @@ class CrearTurnoTests(unittest.TestCase):
         self.assertTrue(connection.committed)
         self.assertEqual(response["turnos"][0]["id"], TURNO_ID)
         self.assertEqual(response["turnos"][0]["hora"], "10:30")
+        self.assertEqual(response["turnos"][0]["tutor"], "María Pérez")
         statements = "\n".join(query for query, _params in connection.cursor_instance.executions)
         self.assertIn("INSERT INTO pacientes", statements)
         self.assertIn("INSERT INTO turnos", statements)
+        self.assertIn("tutor_nombre", statements)
 
     def test_informa_los_datos_faltantes_de_un_paciente_nuevo(self):
         connection = FakeConnection([None])

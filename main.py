@@ -117,6 +117,7 @@ class NuevoTurno(BaseModel):
     fecha_nacimiento: Optional[str] = None
     sexo: Optional[str] = None
     paciente: Optional[PacienteTurno] = None
+    tutor: Optional[str] = None
     consultorio_id: Optional[str] = None
     motivo: str = 'Consulta pediátrica'
 
@@ -304,7 +305,7 @@ def buscar_pacientes(q: str, user=Depends(current_user)):
 def listar_turnos(fecha: str, consultorio_id: str = "all", user=Depends(current_user)):
     conn = get_db_connection(); cursor = get_dict_cursor(conn)
     try:
-        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, NULL AS nombre_paciente, NULL AS dni, NULL AS tutor, NULL AS obra_social, NULL AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
+        query = "SELECT id, fecha_hora_inicio AS fecha_hora, paciente_id, medico_usuario_id, estado AS cobertura, NULL AS nombre_paciente, NULL AS dni, tutor_nombre AS tutor, NULL AS obra_social, NULL AS consultorio_id FROM turnos WHERE DATE(fecha_hora_inicio) = %s"
         params = [fecha]
         if consultorio_id != "all": query += " AND consultorio_id = %s"; params.append(consultorio_id)
         query += " ORDER BY fecha_hora"
@@ -351,14 +352,15 @@ def crear_turno(turno: NuevoTurno, user=Depends(current_user)):
                 (SIGP_SEDE_CLINICA_ID, dni, nombre, apellido, fecha_nacimiento, sexo),
             )
             paciente = cursor.fetchone()
-        cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, fecha_hora_inicio, fecha_hora_fin)
-                        VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id, fecha_hora_inicio AS hora, paciente_id, estado""", (SIGP_SEDE_CLINICA_ID, paciente['id'], medico_id, user['user_id'], turno.motivo, inicio, fin))
+        cursor.execute("""INSERT INTO turnos (sede_clinica_id, paciente_id, medico_usuario_id, solicitado_por, motivo, tutor_nombre, fecha_hora_inicio, fecha_hora_fin)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id, fecha_hora_inicio AS hora, paciente_id, estado""", (SIGP_SEDE_CLINICA_ID, paciente['id'], medico_id, user['user_id'], turno.motivo, (turno.tutor or '').strip() or None, inicio, fin))
         creado = cursor.fetchone(); conn.commit()
         return {"turnos": [{
             "id": creado["id"],
             "hora": inicio.strftime('%H:%M'),
             "nombre_paciente": turno.nombre_paciente,
             "dni": dni,
+            "tutor": (turno.tutor or '').strip() or None,
             "cobertura": "pending",
             "consultorio_id": turno.consultorio_id or "general",
             "consultorio": "Agenda general",

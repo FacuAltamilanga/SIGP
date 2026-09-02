@@ -254,6 +254,7 @@ CREATE TABLE turnos (
     solicitado_por UUID NOT NULL REFERENCES usuarios(id) ON DELETE RESTRICT,
     tipo tipo_atencion NOT NULL DEFAULT 'consulta',
     motivo VARCHAR(250) NOT NULL,
+    tutor_nombre VARCHAR(200),
     fecha_hora_inicio TIMESTAMPTZ NOT NULL,
     fecha_hora_fin TIMESTAMPTZ NOT NULL,
     estado estado_turno NOT NULL DEFAULT 'solicitado',

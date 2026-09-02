@@ -1,0 +1,2 @@
+ALTER TABLE turnos
+ADD COLUMN IF NOT EXISTS tutor_nombre VARCHAR(200);
