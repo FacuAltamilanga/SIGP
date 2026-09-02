@@ -494,8 +494,10 @@ def guardar_triaje(triaje: TriajeRequest, user=Depends(current_user)):
         return {"mensaje": "Triaje guardado correctamente.", "signo_vital_id": signo_vital_id, "edad_dias": history['edad_dias'], "historia_creada_en_urgencia": historia_creada_en_urgencia, "prioridad": prioridad, "alertas": alertas}
     except HTTPException:
         conn.rollback(); raise
-    except psycopg.Error:
-        conn.rollback(); raise HTTPException(status_code=500, detail="No se pudo guardar el triaje.")
+    except psycopg.Error as err:
+        conn.rollback()
+        detalle = getattr(getattr(err, "diag", None), "message_primary", None) or "Error de base de datos al registrar el triaje."
+        raise HTTPException(status_code=500, detail=f"Triaje no registrado ({getattr(err, 'sqlstate', 'DB')}): {detalle}")
     finally:
         cursor.close(); conn.close()
 
