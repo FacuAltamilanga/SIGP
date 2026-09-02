@@ -1076,12 +1076,15 @@ BEGIN
     END;
 
     v_motivo := coalesce(NULLIF(current_setting('app.motivo_auditoria', true), ''), 'Escritura clinica');
-    v_accion := CASE
-        WHEN TG_OP = 'INSERT' AND TG_TABLE_NAME = 'registros_consulta' AND NEW.estado = 'firmado' THEN 'firma'
-        WHEN TG_OP = 'INSERT' THEN 'alta'
-        WHEN NEW.estado::text = 'anulado' THEN 'anulacion'
-        ELSE 'modificacion'
-    END;
+    v_accion := CASE WHEN TG_OP = 'INSERT' THEN 'alta' ELSE 'modificacion' END;
+    -- signos_vitales no posee columna estado; solo se consulta en las
+    -- entidades que sí la tienen para mantener la auditoría genérica segura.
+    IF TG_TABLE_NAME = 'registros_consulta' AND TG_OP = 'INSERT' AND NEW.estado = 'firmado' THEN
+        v_accion := 'firma';
+    ELSIF TG_TABLE_NAME IN ('historias_clinicas', 'registros_consulta', 'alertas_medicas')
+          AND TG_OP = 'UPDATE' AND NEW.estado::text IN ('anulado', 'anulada') THEN
+        v_accion := 'anulacion';
+    END IF;
 
     INSERT INTO log_auditoria_hcd (
         historia_clinica_id, usuario_id, accion, entidad, entidad_id,
